@@ -1,0 +1,32 @@
+{
+    "name": "typhoon/amqp091",
+    "description": "Async (fiber based) client for amqp 091",
+    "license": "MIT",
+    "type": "library",
+    "authors": [
+        {
+            "name": "kafkiansky",
+            "email": "vadimzanfir@gmail.com"
+        },
+        {
+            "name": "Valentin Udaltsov",
+            "email": "udaltsov.valentin@gmail.com"
+        },
+        {
+            "name": "Typhoon Team",
+            "homepage": "https://github.com/orgs/typhoon-php/people"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "amphp/amp": "^3.0",
+        "amphp/pipeline": "^1.2",
+        "amphp/socket": "^2.3"
+    },
+    "minimum-stability": "stable",
+    "autoload": {
+        "psr-4": {
+            "Typhoon\\Amqp091\\": ""
+        }
+    }
+}
