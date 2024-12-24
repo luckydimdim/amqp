@@ -22,17 +22,14 @@ interface ClassMethod
     public const CONNECTION_CLOSE_OK = 51;
     public const CONNECTION_BLOCKED = 60;
     public const CONNECTION_UNBLOCKED = 61;
-
     public const CHANNEL_OPEN = 10;
     public const CHANNEL_OPEN_OK = 11;
     public const CHANNEL_FLOW = 20;
     public const CHANNEL_FLOW_OK = 21;
     public const CHANNEL_CLOSE = 40;
     public const CHANNEL_CLOSE_OK = 41;
-
     public const ACCESS_REQUEST = 10;
     public const ACCESS_REQUEST_OK = 11;
-
     public const EXCHANGE_DECLARE = 10;
     public const EXCHANGE_DECLARE_OK = 11;
     public const EXCHANGE_DELETE = 20;
@@ -41,7 +38,6 @@ interface ClassMethod
     public const EXCHANGE_BIND_OK = 31;
     public const EXCHANGE_UNBIND = 40;
     public const EXCHANGE_UNBIND_OK = 51;
-
     public const QUEUE_DECLARE = 10;
     public const QUEUE_DECLARE_OK = 11;
     public const QUEUE_BIND = 20;
@@ -52,7 +48,6 @@ interface ClassMethod
     public const QUEUE_DELETE_OK = 41;
     public const QUEUE_UNBIND = 50;
     public const QUEUE_UNBIND_OK = 51;
-
     public const BASIC_QOS = 10;
     public const BASIC_QOS_OK = 11;
     public const BASIC_CONSUME = 20;
@@ -71,14 +66,12 @@ interface ClassMethod
     public const BASIC_RECOVER = 110;
     public const BASIC_RECOVER_OK = 111;
     public const BASIC_NACK = 120;
-
     public const TX_SELECT = 10;
     public const TX_SELECT_OK = 11;
     public const TX_COMMIT = 20;
     public const TX_COMMIT_OK = 21;
     public const TX_ROLLBACK = 30;
     public const TX_ROLLBACK_OK = 31;
-
     public const CONFIRM_SELECT = 10;
     public const CONFIRM_SELECT_OK = 11;
 }
