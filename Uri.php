@@ -37,7 +37,7 @@ final class Uri
 
         $query = [];
         if (isset($components['query']) && $components['query'] !== '') {
-            $query = parseQuery($components['query']);
+            $query = Internal\parseQuery($components['query']);
         }
 
         $certFile = null;
