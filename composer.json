@@ -27,6 +27,7 @@
     "autoload": {
         "psr-4": {
             "Typhoon\\Amqp091\\": ""
-        }
+        },
+        "files": ["functions.php"]
     }
 }

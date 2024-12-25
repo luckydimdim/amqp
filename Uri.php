@@ -12,7 +12,7 @@ use Typhoon\Amqp091\Exception\UriIsInvalid;
  */
 final class Uri
 {
-    private const DEFAULT_HOST = 'amqp';
+    private const DEFAULT_HOST = 'localhost';
     private const DEFAULT_PORT = 5672;
     private const DEFAULT_USERNAME = 'guest';
     private const DEFAULT_PASSWORD = 'guest';
@@ -35,31 +35,34 @@ final class Uri
             throw new UriIsInvalid();
         }
 
-        parse_str($components['query'] ?? '', $query);
+        $query = [];
+        if (isset($components['query']) && $components['query'] !== '') {
+            $query = parseQuery($components['query']);
+        }
 
         $certFile = null;
-        if (isset($query['certfile']) && \is_string($query['certfile']) && $query['certfile'] !== '') {
-            $certFile = $query['certfile'];
+        if (isset($query['certfile'])) {
+            $certFile = \is_array($query['certfile']) ? $query['certfile'][0] : $query['certfile'];
         }
 
         $keyFile = null;
-        if (isset($query['keyfile']) && \is_string($query['keyfile']) && $query['keyfile'] !== '') {
-            $keyFile = $query['keyfile'];
+        if (isset($query['keyfile'])) {
+            $keyFile = \is_array($query['keyfile']) ? $query['keyfile'][0] : $query['keyfile'];
         }
 
         $cacertfile = null;
-        if (isset($query['cacertfile']) && \is_string($query['cacertfile']) && $query['cacertfile'] !== '') {
-            $cacertfile = $query['cacertfile'];
+        if (isset($query['cacertfile'])) {
+            $cacertfile = \is_array($query['cacertfile']) ? $query['cacertfile'][0] : $query['cacertfile'];
         }
 
         $serverName = null;
-        if (isset($query['server_name_indication']) && \is_string($query['server_name_indication']) && $query['server_name_indication'] !== '') {
-            $serverName = $query['server_name_indication'];
+        if (isset($query['server_name_indication'])) {
+            $serverName = \is_array($query['server_name_indication']) ? $query['server_name_indication'][0] : $query['server_name_indication'];
         }
 
-        $authMechanism = null;
-        if (isset($query['auth_mechanism']) && \is_string($query['auth_mechanism']) && $query['auth_mechanism'] !== '') {
-            $authMechanism = $query['auth_mechanism'];
+        $authMechanisms = [];
+        if (isset($query['auth_mechanism'])) {
+            $authMechanisms = \is_string($query['auth_mechanism']) ? [$query['auth_mechanism']] : $query['auth_mechanism'];
         }
 
         $heartbeat = null;
@@ -103,7 +106,7 @@ final class Uri
             keyFile: $keyFile,
             cacertFile: $cacertfile,
             serverName: $serverName,
-            authMechanism: $authMechanism,
+            authMechanisms: $authMechanisms,
             heartbeat: $heartbeat,
             connectionTimeout: $connectionTimeout,
             channelMax: $channelMax,
@@ -114,6 +117,7 @@ final class Uri
      * @param non-empty-string $host
      * @param positive-int $port
      * @param non-empty-string $vhost
+     * @param list<non-empty-string> $authMechanisms
      */
     private function __construct(
         public readonly Scheme $scheme = Scheme::amqp,
@@ -126,7 +130,7 @@ final class Uri
         public readonly ?string $keyFile = null,
         public readonly ?string $cacertFile = null,
         public readonly ?string $serverName = null,
-        public readonly ?string $authMechanism = null,
+        public readonly array $authMechanisms = [],
         public readonly ?int $heartbeat = null,
         public readonly ?int $connectionTimeout = null,
         public readonly ?int $channelMax = null,
