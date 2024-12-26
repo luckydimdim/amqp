@@ -33,6 +33,8 @@ final class Reader
 
     private readonly ReaderWriter $rw;
 
+    private readonly Parser $parser;
+
     public function __construct(
         private readonly ReadFrom $reader,
     ) {
@@ -41,6 +43,10 @@ final class Reader
         $this->rw = new ReaderWriter(
             $this->buffer,
             $this->buffer,
+        );
+        $this->parser = new Parser(
+            $this->endian,
+            $this->rw,
         );
     }
 
@@ -77,10 +83,7 @@ final class Reader
         $classId = $this->rw->readUint16($this->endian);
         $methodId = $this->rw->readUint16($this->endian);
 
-        $frame = (self::METHODS[$classId][$methodId] ?? throw new \Exception("Unexpected class method {$classId}:{$methodId}."))::parse(
-            $this->rw,
-            $this->endian,
-        );
+        $frame = (self::METHODS[$classId][$methodId] ?? throw new \Exception("Unexpected class method {$classId}:{$methodId}."))::parse($this->parser);
 
         return new MethodFrame($channelId, $frame);
     }

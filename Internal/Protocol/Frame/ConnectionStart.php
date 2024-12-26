@@ -5,10 +5,7 @@ declare(strict_types=1);
 namespace Typhoon\Amqp091\Internal\Protocol\Frame;
 
 use Typhoon\Amqp091\Internal\Protocol\Frame;
-use Typhoon\ByteOrder\ReadFrom;
-use Typhoon\Endian\endian;
-use function Typhoon\Amqp091\Internal\readTable;
-use function Typhoon\Amqp091\Internal\readText;
+use Typhoon\Amqp091\Internal\Protocol\Parser;
 
 /**
  * @internal
@@ -24,14 +21,14 @@ final class ConnectionStart implements Frame
         public readonly string $locales = '',
     ) {}
 
-    public static function parse(ReadFrom $reader, endian $endian = endian::network): self
+    public static function parse(Parser $parser): self
     {
-        $versionMajor = $reader->readUint8($endian);
-        $versionMinor = $reader->readUint8($endian);
+        $versionMajor = $parser->readUint8();
+        $versionMinor = $parser->readUint8();
 
-        [$serverProperties] = readTable($reader, $endian);
-        [$mechanism] = readText($reader, $endian);
-        [$locales] = readText($reader, $endian);
+        $serverProperties = $parser->readTable();
+        $mechanism = $parser->readText();
+        $locales = $parser->readText();
 
         return new self(
             $versionMajor,
