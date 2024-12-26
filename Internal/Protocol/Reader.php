@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Typhoon\Amqp091\Internal\Protocol;
 
+use Typhoon\Amqp091\Exception\UnsupportedClassMethod;
 use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionStart;
 use Typhoon\ByteBuffer\Buffer;
 use Typhoon\ByteOrder\ReaderWriter;
@@ -83,7 +84,7 @@ final class Reader
         $classId = $this->rw->readUint16($this->endian);
         $methodId = $this->rw->readUint16($this->endian);
 
-        $frame = (self::METHODS[$classId][$methodId] ?? throw new \Exception("Unexpected class method {$classId}:{$methodId}."))::parse($this->parser);
+        $frame = (self::METHODS[$classId][$methodId] ?? throw UnsupportedClassMethod::forClassMethod($classId, $methodId))::parse($this->parser);
 
         return new MethodFrame($channelId, $frame);
     }
