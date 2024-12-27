@@ -8,7 +8,7 @@ use Typhoon\Amqp091\Exception\UriIsInvalid;
 
 /**
  * @api
- * @see http://www.rabbitmq.com/uri-spec.html
+ * @see https://www.rabbitmq.com/docs/uri-spec
  */
 final class Uri
 {
@@ -17,6 +17,10 @@ final class Uri
     private const DEFAULT_USERNAME = 'guest';
     private const DEFAULT_PASSWORD = 'guest';
     private const DEFAULT_VHOST = '/';
+    private const DEFAULT_CONNECTION_TIMEOUT = 1000;
+    private const DEFAULT_HEARTBEAT_INTERVAL = 6;
+    private const MAX_CHANNEL = 0xFFFF;
+    private const MAX_FRAME = 0xFFFF;
 
     public static function default(): self
     {
@@ -65,19 +69,28 @@ final class Uri
             $authMechanisms = \is_string($query['auth_mechanism']) ? [$query['auth_mechanism']] : $query['auth_mechanism'];
         }
 
-        $heartbeat = null;
-        if (isset($query['heartbeat']) && is_numeric($query['heartbeat'])) {
+        $heartbeat = self::DEFAULT_HEARTBEAT_INTERVAL;
+        if (isset($query['heartbeat']) && is_numeric($query['heartbeat']) && (int) $query['heartbeat'] >= 0) {
+            /** @var non-negative-int $heartbeat */
             $heartbeat = (int) $query['heartbeat'];
         }
 
-        $connectionTimeout = null;
-        if (isset($query['connection_timeout']) && is_numeric($query['connection_timeout'])) {
+        $connectionTimeout = self::DEFAULT_CONNECTION_TIMEOUT;
+        if (isset($query['connection_timeout']) && is_numeric($query['connection_timeout']) && (int) $query['connection_timeout'] > 0) {
+            /** @var positive-int $connectionTimeout */
             $connectionTimeout = (int) $query['connection_timeout'];
         }
 
-        $channelMax = null;
-        if (isset($query['channel_max']) && is_numeric($query['channel_max'])) {
-            $channelMax = (int) $query['channel_max'];
+        $channelMax = self::MAX_CHANNEL;
+        if (isset($query['channel_max']) && is_numeric($query['channel_max']) && (int) $query['channel_max'] > 0) {
+            /** @var int<0, 65535> $channelMax */
+            $channelMax = min($channelMax, (int) $query['channel_max']);
+        }
+
+        $frameMax = self::MAX_FRAME;
+        if (isset($query['frame_max']) && is_numeric($query['frame_max']) && (int) $query['frame_max'] > 0) {
+            /** @var int<0, 65535> $frameMax */
+            $frameMax = min($frameMax, (int) $query['frame_max']);
         }
 
         $host = self::DEFAULT_HOST;
@@ -110,7 +123,16 @@ final class Uri
             heartbeat: $heartbeat,
             connectionTimeout: $connectionTimeout,
             channelMax: $channelMax,
+            frameMax: $frameMax,
         );
+    }
+
+    /**
+     * @return non-empty-string
+     */
+    public function connectionDsn(): string
+    {
+        return \sprintf('tcp://%s:%d', $this->host, $this->port);
     }
 
     /**
@@ -118,6 +140,10 @@ final class Uri
      * @param positive-int $port
      * @param non-empty-string $vhost
      * @param list<non-empty-string> $authMechanisms
+     * @param non-negative-int $heartbeat
+     * @param positive-int $connectionTimeout
+     * @param int<0, 65535> $channelMax
+     * @param int<0, 65535> $frameMax
      */
     private function __construct(
         public readonly Scheme $scheme = Scheme::amqp,
@@ -131,8 +157,9 @@ final class Uri
         public readonly ?string $cacertFile = null,
         public readonly ?string $serverName = null,
         public readonly array $authMechanisms = [],
-        public readonly ?int $heartbeat = null,
-        public readonly ?int $connectionTimeout = null,
-        public readonly ?int $channelMax = null,
+        public readonly int $heartbeat = self::DEFAULT_HEARTBEAT_INTERVAL,
+        public readonly int $connectionTimeout = self::DEFAULT_CONNECTION_TIMEOUT,
+        public readonly int $channelMax = self::MAX_CHANNEL,
+        public readonly int $frameMax = self::MAX_FRAME,
     ) {}
 }
