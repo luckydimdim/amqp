@@ -1,0 +1,208 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Typhoon\Amqp091\Internal\Protocol;
+
+use Typhoon\Amqp091\Internal\Io;
+use Typhoon\Endian\endian;
+
+/**
+ * @internal
+ * @psalm-internal Typhoon\Amqp091
+ */
+final class Method implements Frame
+{
+    private const FRAME_END = 206;
+
+    /**
+     * @param array<string, mixed> $clientProperties
+     */
+    public static function connectionStartOk(
+        array $clientProperties,
+        string $mechanism,
+        string $username,
+        string $password,
+        string $locale = 'en_US',
+    ): self {
+        return new self(
+            ClassType::CONNECTION,
+            ClassMethod::CONNECTION_START_OK,
+            new Frame\ConnectionStartOk(
+                $clientProperties,
+                $mechanism,
+                $username,
+                $password,
+                $locale,
+            ),
+        );
+    }
+
+    /**
+     * @param non-negative-int $channelMax
+     * @param non-negative-int $frameMax
+     * @param non-negative-int $heartbeat
+     */
+    public static function connectionTuneOk(
+        int $channelMax,
+        int $frameMax,
+        int $heartbeat,
+    ): self {
+        return new self(
+            ClassType::CONNECTION,
+            ClassMethod::CONNECTION_TUNE_OK,
+            new Frame\ConnectionTuneOk(
+                $channelMax,
+                $frameMax,
+                $heartbeat,
+            ),
+        );
+    }
+
+    /**
+     * @param non-empty-string $vhost
+     */
+    public static function connectionOpen(string $vhost): self
+    {
+        return new self(
+            ClassType::CONNECTION,
+            ClassMethod::CONNECTION_OPEN,
+            new Frame\ConnectionOpen($vhost),
+        );
+    }
+
+    /**
+     * @param non-negative-int $channelId
+     */
+    public static function channelOpen(int $channelId): self
+    {
+        return new self(
+            ClassType::CHANNEL,
+            ClassMethod::CHANNEL_OPEN,
+            new Frame\ChannelOpen(),
+            $channelId,
+        );
+    }
+
+    /**
+     * @param non-negative-int $channelId
+     * @param non-empty-string $exchange
+     * @param non-empty-string $exchangeType
+     * @param array<string, mixed> $arguments
+     */
+    public static function exchangeDeclare(
+        int $channelId,
+        string $exchange,
+        string $exchangeType,
+        bool $passive = false,
+        bool $durable = false,
+        bool $autoDelete = false,
+        bool $internal = false,
+        bool $noWait = false,
+        array $arguments = [],
+    ): self {
+        return new self(
+            ClassType::EXCHANGE,
+            ClassMethod::EXCHANGE_DECLARE,
+            new Frame\ExchangeDeclare(
+                exchange: $exchange,
+                exchangeType: $exchangeType,
+                passive: $passive,
+                durable: $durable,
+                autoDelete: $autoDelete,
+                internal: $internal,
+                noWait: $noWait,
+                arguments: $arguments,
+            ),
+            $channelId,
+        );
+    }
+
+    /**
+     * @param non-negative-int $channelId
+     * @param array<string, mixed> $arguments
+     */
+    public static function queueDeclare(
+        int $channelId,
+        string $queue,
+        bool $passive = false,
+        bool $durable = false,
+        bool $exclusive = false,
+        bool $autoDelete = false,
+        bool $noWait = false,
+        array $arguments = [],
+    ): self {
+        return new self(
+            ClassType::QUEUE,
+            ClassMethod::QUEUE_DECLARE,
+            new Frame\QueueDeclare(
+                queue: $queue,
+                passive: $passive,
+                durable: $durable,
+                exclusive: $exclusive,
+                autoDelete: $autoDelete,
+                noWait: $noWait,
+                arguments: $arguments,
+            ),
+            $channelId,
+        );
+    }
+
+    /**
+     * @param non-negative-int $channelId
+     * @param array<string, mixed> $arguments
+     */
+    public static function queueBind(
+        int $channelId,
+        string $queue,
+        string $exchange,
+        string $routingKey,
+        bool $noWait = false,
+        array $arguments = [],
+    ): self {
+        return new self(
+            ClassType::QUEUE,
+            ClassMethod::QUEUE_BIND,
+            new Frame\QueueBind(
+                queue: $queue,
+                exchange: $exchange,
+                routingKey: $routingKey,
+                noWait: $noWait,
+                arguments: $arguments,
+            ),
+            $channelId,
+        );
+    }
+
+    public static function read(Io\ReadBytes $reader): self
+    {
+        return new self();
+    }
+
+    /**
+     * @param ClassType::* $classType
+     * @param ClassMethod::* $classMethod
+     * @param non-negative-int $channelId all connection frames go through zero channel, so it will be the default channel
+     */
+    private function __construct(
+        public readonly int $classType,
+        public readonly int $classMethod,
+        public readonly Frame $frame,
+        public readonly int $channelId = 0,
+    ) {}
+
+    public function write(Io\WriteBytes $writer): Io\WriteBytes
+    {
+        return $writer
+            ->writeUint8(FrameType::method->value)
+            ->writeUint16($this->channelId)
+            ->reserve(endian::network->packUint32(...), function (Io\WriteBytes $writer): void {
+                $writer
+                    ->writeUint16($this->classType)
+                    ->writeUint16($this->classMethod);
+
+                $this->frame->write($writer);
+            })
+            ->writeUint8(self::FRAME_END);
+    }
+}
