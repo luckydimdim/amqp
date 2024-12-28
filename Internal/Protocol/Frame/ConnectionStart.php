@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Typhoon\Amqp091\Internal\Protocol\Frame;
 
 use Typhoon\Amqp091\Internal\Protocol\Frame;
-use Typhoon\Amqp091\Internal\Protocol\Parser;
+use Typhoon\Amqp091\Internal\Io;
 
 /**
  * @internal
@@ -14,16 +14,18 @@ use Typhoon\Amqp091\Internal\Protocol\Parser;
  *     version: string,
  *     platform: string,
  *     cluster_name: string,
- *     capabilities: array{
- *        publisher_confirms: bool,
- *        direct_reply_to: bool,
- *        per_consumer_qos: bool,
+ *     capabilities?: array{
+ *        publisher_confirms?: bool,
+ *        direct_reply_to?: bool,
+ *        per_consumer_qos?: bool,
  *     },
  * }
  */
 final class ConnectionStart implements Frame
 {
     /**
+     * @param non-negative-int $versionMajor
+     * @param non-negative-int $versionMinor
      * @param ServerProperties $serverProperties
      * @param list<string> $mechanisms
      */
@@ -35,19 +37,29 @@ final class ConnectionStart implements Frame
         public readonly string $locales = '',
     ) {}
 
-    public static function parse(Parser $parser): self
+    public static function read(Io\ReadBytes $reader): self
     {
-        [$versionMajor, $versionMinor] = [$parser->readUint8(), $parser->readUint8()];
+        [$versionMajor, $versionMinor] = [$reader->readUint8(), $reader->readUint8()];
 
         /** @var ServerProperties $serverProperties */
-        $serverProperties = $parser->readTable();
+        $serverProperties = $reader->readTable();
 
         return new self(
             $versionMajor,
             $versionMinor,
             $serverProperties,
-            explode(' ', $parser->readText()),
-            $parser->readText(),
+            explode(' ', $reader->readText()),
+            $reader->readText(),
         );
+    }
+
+    public function write(Io\WriteBytes $writer): Io\WriteBytes
+    {
+        return $writer
+            ->writeUint8($this->versionMajor)
+            ->writeUint8($this->versionMinor)
+            ->writeTable($this->serverProperties)
+            ->writeText(implode(' ', $this->mechanisms))
+            ->writeText($this->locales);
     }
 }

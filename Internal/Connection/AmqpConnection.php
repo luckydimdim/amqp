@@ -8,15 +8,17 @@ use Amp\Future;
 use Amp\Socket\Socket;
 use Revolt\EventLoop;
 use Typhoon\AmpBridge\AmpReaderWriter;
+use Typhoon\Amqp091\Internal\Protocol;
+use Typhoon\Amqp091\Internal\WriterTo;
 use Typhoon\ByteBuffer\BufferedReaderWriter;
 use Typhoon\ByteOrder\ReaderWriter;
-use Typhoon\Amqp091\Internal\Protocol;
+use Typhoon\ByteWriter\Writer;
 
 /**
  * @internal
  * @psalm-internal Typhoon\Amqp091
  */
-final class AmqpConnection
+final class AmqpConnection implements Writer
 {
     private readonly Socket $socket;
 
@@ -61,9 +63,11 @@ final class AmqpConnection
         return $this->hooks->subscribe($channelId, $frameType);
     }
 
-    /**
-     * @param non-empty-string $bytes
-     */
+    public function writeAt(WriterTo $to): void
+    {
+        $to->writeTo($this);
+    }
+
     public function write(string $bytes): void
     {
         $this->socket->write($bytes);

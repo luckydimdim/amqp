@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace Typhoon\Amqp091\Internal\Protocol;
 
 use Typhoon\Amqp091\Exception\UnsupportedClassMethod;
+use Typhoon\Amqp091\Internal\Protocol\Frame\ChannelOpenOkFrame;
+use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionOpenOk;
 use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionStart;
-use Typhoon\ByteBuffer\Buffer;
-use Typhoon\ByteOrder\ReaderWriter;
+use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionTune;
+use Typhoon\Amqp091\Internal\Protocol\Frame\ExchangeDeclareOk;
+use Typhoon\Amqp091\Internal\Protocol\Frame\QueueBindOk;
+use Typhoon\Amqp091\Internal\Protocol\Frame\QueueDeclareOk;
 use Typhoon\ByteOrder\ReadFrom;
-use Typhoon\Endian\endian;
-use Typhoon\StringBuffer\Str;
+use Typhoon\Amqp091\Internal\Io;
 
 /**
  * @internal
@@ -25,67 +28,71 @@ final class Reader
     private const METHODS = [
         ClassType::CONNECTION => [
             ClassMethod::CONNECTION_START => ConnectionStart::class,
+            ClassMethod::CONNECTION_TUNE => ConnectionTune::class,
+            ClassMethod::CONNECTION_OPEN_OK => ConnectionOpenOk::class,
+        ],
+        ClassType::CHANNEL => [
+            ClassMethod::CHANNEL_OPEN_OK => ChannelOpenOkFrame::class,
+        ],
+        ClassType::EXCHANGE => [
+            ClassMethod::EXCHANGE_DECLARE_OK => ExchangeDeclareOk::class,
+        ],
+        ClassType::QUEUE => [
+            ClassMethod::QUEUE_DECLARE_OK => QueueDeclareOk::class,
+            ClassMethod::QUEUE_BIND_OK => QueueBindOk::class,
         ],
     ];
 
-    private readonly endian $endian;
+    private readonly ReadFrom $reader;
 
-    private readonly Buffer $buffer;
+    private readonly Io\Buffer $buffer;
 
-    private readonly ReaderWriter $rw;
-
-    private readonly Parser $parser;
-
-    public function __construct(
-        private readonly ReadFrom $reader,
-    ) {
-        $this->buffer = new Buffer();
-        $this->endian = endian::network;
-        $this->rw = new ReaderWriter(
-            $this->buffer,
-            $this->buffer,
-        );
-        $this->parser = new Parser(
-            $this->endian,
-            $this->rw,
-        );
+    public function __construct(ReadFrom $reader)
+    {
+        $this->reader = $reader;
+        $this->buffer = Io\Buffer::alloc();
     }
 
     /**
-     * @return iterable<array-key, MethodFrame>
+     * @return iterable<array-key, Request>
      * @throws \Throwable
      */
-    public function readFrames(): iterable
+    public function iterate(): iterable
     {
-        $header = Str::immutable($this->reader->read(self::HEADER_SIZE));
+        $this->buffer
+            ->write($this->reader->read(self::HEADER_SIZE))
+            ->rewind();
 
-        $type = FrameType::from($this->endian->unpackUint8($header[0]));
-        $channel = $this->endian->unpackUint16($header['1:3']);
+        $type = FrameType::from($this->buffer->readUint8());
+        $channelId = $this->buffer->readUint16();
 
-        if (($size = $this->endian->unpackUint32($header['3:7'])) > 0) {
-            $this->rw->write($this->reader->read($size));
+        if (($size = $this->buffer->readUint32()) > 0) {
+            $this->buffer
+                ->write($this->reader->read($size))
+                ->rewind();
         }
 
         yield match ($type) {
-            FrameType::method => $this->parseMethodFrame($channel),
+            FrameType::method => $this->parseMethodFrame($channelId),
             default => throw new \Exception('Not implemented yet'),
         };
 
-        if ($this->reader->readUint8($this->endian) !== 206) {
+        if ($this->reader->readUint8() !== 206) {
             throw new \Exception('Bad frame.');
         }
     }
 
     /**
+     * @param non-negative-int $channelId
      * @throws \Throwable
      */
-    private function parseMethodFrame(int $channelId): MethodFrame
+    private function parseMethodFrame(int $channelId): Request
     {
-        $classId = $this->rw->readUint16($this->endian);
-        $methodId = $this->rw->readUint16($this->endian);
+        $classId = $this->buffer->readUint16();
+        $methodId = $this->buffer->readUint16();
 
-        $frame = (self::METHODS[$classId][$methodId] ?? throw UnsupportedClassMethod::forClassMethod($classId, $methodId))::parse($this->parser);
+        $frame = (self::METHODS[$classId][$methodId] ?? throw UnsupportedClassMethod::forClassMethod($classId, $methodId))::read($this->buffer);
 
-        return new MethodFrame($channelId, $frame);
+        return new Request($channelId, $frame);
     }
 }
