@@ -95,11 +95,6 @@ final class AmqpConnection implements Writer
             ->writeTo($this);
     }
 
-    public function writeAt(WriterTo $to): void
-    {
-        $to->writeTo($this);
-    }
-
     public function write(string $bytes): void
     {
         $this->socket->write($bytes);
