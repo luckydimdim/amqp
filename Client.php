@@ -9,13 +9,12 @@ use Amp\CancelledException;
 use Amp\NullCancellation;
 use Amp\Socket;
 use Typhoon\Amqp091\Internal\Io\AmqpConnection;
+use Typhoon\Amqp091\Internal\Properties;
 use Typhoon\Amqp091\Internal\Protocol;
 use Typhoon\Amqp091\Internal\Protocol\Frame;
-use Typhoon\Amqp091\Internal\VersionProvider;
 
 /**
  * @api
- * @psalm-type ClientProperties = array{product: non-empty-string, version: non-empty-string, platform: non-empty-string, capabilities: array<non-empty-string, bool>}
  */
 final class Client
 {
@@ -27,21 +26,11 @@ final class Client
     /** @var array<non-negative-int, Channel> */
     private array $channels = [];
 
-    /** @var ClientProperties */
-    private array $properties;
+    private readonly Properties $properties;
 
     public function __construct(private readonly Uri $uri)
     {
-        $this->properties = [
-            'product' => 'AMQP 0.9.1 Client',
-            'version' => VersionProvider::provide(),
-            'platform' => 'php',
-            'capabilities' => [
-                'connection.blocked' => true,
-                'basic.nack' => true,
-                'publisher_confirms' => true,
-            ],
-        ];
+        $this->properties = Properties::createDefault();
     }
 
     /**
@@ -112,7 +101,7 @@ final class Client
     private function connectionStart(Frame\ConnectionStart $_): void
     {
         $this->connection?->writeFrame(
-            Protocol\Method::connectionStartOk($this->properties, 'AMQPLAIN', $this->uri->username, $this->uri->password),
+            Protocol\Method::connectionStartOk($this->properties->toArray(), 'AMQPLAIN', $this->uri->username, $this->uri->password),
         );
     }
 
@@ -133,6 +122,8 @@ final class Client
         $this->connection?->writeFrame(
             Protocol\Method::connectionTuneOk($maxChannel, $maxFrame, $heartbeat),
         );
+
+        $this->properties->tune($maxChannel, $maxFrame);
     }
 
     /**
