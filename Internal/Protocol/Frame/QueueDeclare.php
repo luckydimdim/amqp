@@ -32,10 +32,7 @@ final class QueueDeclare implements Frame
         $reserved1 = $reader->readUint16();
         $queue = $reader->readString();
 
-        /** @var array{bool, bool, bool, bool, bool} $bits */
-        $bits = $reader->readBits(5);
-
-        [$passive, $durable, $exclusive, $autoDelete, $noWait] = $bits;
+        [$passive, $durable, $exclusive, $autoDelete, $noWait] = $reader->readBits(5);
         $arguments = $reader->readTable();
 
         return new self(

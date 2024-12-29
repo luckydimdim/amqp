@@ -347,6 +347,7 @@ final class Buffer implements
 
     public function readBits(int $n): array
     {
+        /** @var non-empty-list<bool> $bits */
         $bits = [];
         $value = $this->readUint8();
 

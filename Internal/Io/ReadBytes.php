@@ -76,7 +76,7 @@ interface ReadBytes
 
     /**
      * @param non-negative-int $n
-     * @return list<bool>
+     * @return non-empty-list<bool>
      */
     public function readBits(int $n): array;
 }

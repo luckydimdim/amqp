@@ -41,10 +41,7 @@ final class ExchangeDeclare implements Frame
         $exchangeType = $reader->readString();
         \assert($exchangeType !== '', 'exchange type must not be empty.');
 
-        /** @var array{bool, bool, bool, bool, bool} $bits */
-        $bits = $reader->readBits(5);
-
-        [$passive, $durable, $autoDelete, $internal, $noWait] = $bits;
+        [$passive, $durable, $autoDelete, $internal, $noWait] = $reader->readBits(5);
         $arguments = $reader->readTable();
 
         return new self(
