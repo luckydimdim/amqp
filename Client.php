@@ -11,6 +11,7 @@ use Amp\Socket;
 use Typhoon\Amqp091\Internal\Io\AmqpConnection;
 use Typhoon\Amqp091\Internal\Properties;
 use Typhoon\Amqp091\Internal\Protocol;
+use Typhoon\Amqp091\Internal\Protocol\Auth;
 use Typhoon\Amqp091\Internal\Protocol\Frame;
 
 /**
@@ -101,7 +102,7 @@ final class Client
     private function connectionStart(Frame\ConnectionStart $_): void
     {
         $this->connection?->writeFrame(
-            Protocol\Method::connectionStartOk($this->properties->toArray(), 'AMQPLAIN', $this->uri->username, $this->uri->password),
+            Protocol\Method::connectionStartOk($this->properties->toArray(), new Auth\AMQPlain($this->uri->username, $this->uri->password)),
         );
     }
 
