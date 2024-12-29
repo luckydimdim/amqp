@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Typhoon\Amqp091\Internal\Protocol;
 
 use Typhoon\Amqp091\Exception\UnsupportedClassMethod;
+use Typhoon\Amqp091\Internal\Io;
 use Typhoon\Amqp091\Internal\Protocol\Frame\ChannelOpenOkFrame;
 use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionOpenOk;
 use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionStart;
@@ -13,7 +14,6 @@ use Typhoon\Amqp091\Internal\Protocol\Frame\ExchangeDeclareOk;
 use Typhoon\Amqp091\Internal\Protocol\Frame\QueueBindOk;
 use Typhoon\Amqp091\Internal\Protocol\Frame\QueueDeclareOk;
 use Typhoon\ByteOrder\ReadFrom;
-use Typhoon\Amqp091\Internal\Io;
 
 /**
  * @internal

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Typhoon\Amqp091\Internal\Protocol\Frame;
 
-use Typhoon\Amqp091\Internal\Protocol\Frame;
 use Typhoon\Amqp091\Internal\Io;
+use Typhoon\Amqp091\Internal\Protocol\Frame;
 
 /**
  * @internal

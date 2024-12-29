@@ -6,7 +6,6 @@ namespace Typhoon\Amqp091\Internal;
 
 use Amp\DeferredFuture;
 use Amp\Future;
-use Typhoon\Amqp091\Internal\Protocol;
 
 /**
  * @internal
