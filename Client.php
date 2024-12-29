@@ -92,7 +92,7 @@ final class Client
         $channelId = $this->allocateChannelId();
         $this->openChannel($channelId, $cancellation);
 
-        return new Channel($channelId, $this->connection ?: throw new \LogicException('Connection is closed.'));
+        return new Channel($channelId, $this->connection ?: throw new Exception\ConnectionIsClosed());
     }
 
     /**
