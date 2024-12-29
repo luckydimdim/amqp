@@ -259,6 +259,17 @@ final class Channel
     }
 
     /**
+     * @param non-negative-int $replyCode
+     * @throws \Throwable
+     */
+    public function close(int $replyCode = 200, string $replyText = ''): void
+    {
+        $this->connection->writeFrame(Protocol\Method::channelClose($this->channelId, $replyCode, $replyText));
+
+        $this->await(Frame\ChannelCloseOk::class);
+    }
+
+    /**
      * @template T of Protocol\Frame
      * @param class-string<T> $frameType
      * @return T

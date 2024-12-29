@@ -67,6 +67,25 @@ final class AmqpConnection implements Writer
     }
 
     /**
+     * @template T of Protocol\Frame
+     * @param non-negative-int $channelId
+     * @param class-string<T> ...$frameTypes
+     * @return Future<T>
+     */
+    public function subscribeAny(int $channelId, string ...$frameTypes): Future
+    {
+        return $this->hooks->subscribeAny($channelId, ...$frameTypes);
+    }
+
+    /**
+     * @param non-negative-int $channelId
+     */
+    public function unsubscribe(int $channelId): void
+    {
+        $this->hooks->unsubscribe($channelId);
+    }
+
+    /**
      * @throws \Throwable
      */
     public function writeFrame(Protocol\Frame $frame): void

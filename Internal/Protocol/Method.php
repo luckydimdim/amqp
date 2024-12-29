@@ -86,6 +86,39 @@ final class Method implements Frame
 
     /**
      * @param non-negative-int $channelId
+     * @param non-negative-int $replyCode
+     */
+    public static function channelClose(
+        int $channelId,
+        int $replyCode = 200,
+        string $replyText = '',
+    ): self {
+        return new self(
+            ClassType::CHANNEL,
+            ClassMethod::CHANNEL_CLOSE,
+            new Frame\ChannelClose(
+                $replyCode,
+                $replyText,
+            ),
+            $channelId,
+        );
+    }
+
+    /**
+     * @param non-negative-int $channelId
+     */
+    public static function channelCloseOk(int $channelId): self
+    {
+        return new self(
+            ClassType::CHANNEL,
+            ClassMethod::CHANNEL_CLOSE_OK,
+            Frame\ChannelCloseOk::frame,
+            $channelId,
+        );
+    }
+
+    /**
+     * @param non-negative-int $channelId
      * @param non-empty-string $exchange
      * @param non-empty-string $exchangeType
      * @param array<string, mixed> $arguments

@@ -11,10 +11,6 @@ use Amp\Socket;
 use Typhoon\Amqp091\Internal\Io\AmqpConnection;
 use Typhoon\Amqp091\Internal\Protocol;
 use Typhoon\Amqp091\Internal\Protocol\Frame;
-use Typhoon\Amqp091\Internal\Protocol\Frame\ChannelOpenOkFrame;
-use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionOpenOk;
-use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionStart;
-use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionTune;
 use Typhoon\Amqp091\Internal\VersionProvider;
 
 /**
@@ -63,11 +59,11 @@ final class Client
             $this->connection->writeFrame(Frame\ProtocolHeader::frame);
 
             $this->connectionStart(
-                $this->await(ConnectionStart::class, cancellation: $cancellation),
+                $this->await(Frame\ConnectionStart::class, cancellation: $cancellation),
             );
 
             $this->connectionTune(
-                $this->await(ConnectionTune::class, cancellation: $cancellation),
+                $this->await(Frame\ConnectionTune::class, cancellation: $cancellation),
             );
 
             $this->connectionOpen($cancellation);
@@ -85,7 +81,7 @@ final class Client
     /**
      * @throws \Throwable
      */
-    private function connectionStart(ConnectionStart $_): void
+    private function connectionStart(Frame\ConnectionStart $_): void
     {
         $this->connection?->writeFrame(
             Protocol\Method::connectionStartOk($this->properties, 'AMQPLAIN', $this->uri->username, $this->uri->password),
@@ -95,7 +91,7 @@ final class Client
     /**
      * @throws \Throwable
      */
-    private function connectionTune(ConnectionTune $tune): void
+    private function connectionTune(Frame\ConnectionTune $tune): void
     {
         $heartbeat = (int) min($this->uri->heartbeat, $tune->heartbeat / 1000);
         \assert($heartbeat >= 0, 'heartbeat must not be negative.');
@@ -118,7 +114,7 @@ final class Client
     {
         $this->connection?->writeFrame(Protocol\Method::connectionOpen($this->uri->vhost));
 
-        $this->await(ConnectionOpenOk::class, cancellation: $cancellation);
+        $this->await(Frame\ConnectionOpenOk::class, cancellation: $cancellation);
     }
 
     /**
@@ -129,7 +125,18 @@ final class Client
     {
         $this->connection?->writeFrame(Protocol\Method::channelOpen($channelId));
 
-        $this->await(ChannelOpenOkFrame::class, $channelId, $cancellation);
+        $this->await(Frame\ChannelOpenOkFrame::class, $channelId, $cancellation);
+
+        $this->connection
+            ?->subscribeAny($channelId, Frame\ChannelCloseOk::class, Frame\ChannelClose::class)
+            ->map(function (Frame\ChannelCloseOk|Frame\ChannelClose $frame) use ($channelId): void {
+                $this->connection?->unsubscribe($channelId);
+                unset($this->channels[$channelId]);
+
+                if ($frame instanceof Frame\ChannelClose) {
+                    $this->connection?->writeFrame(Protocol\Method::channelCloseOk($channelId));
+                }
+            });
     }
 
     /**

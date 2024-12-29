@@ -6,11 +6,12 @@ namespace Typhoon\Amqp091\Internal;
 
 use Amp\DeferredFuture;
 use Amp\Future;
+use Revolt\EventLoop;
 
 /**
  * @internal
  * @psalm-internal Typhoon\Amqp091
- * @template-implements \IteratorAggregate<array-key, DeferredFuture<Protocol\Frame>>
+ * @template-implements \IteratorAggregate<non-negative-int, DeferredFuture<Protocol\Frame>>
  */
 final class Hooks implements
     \IteratorAggregate,
@@ -19,8 +20,31 @@ final class Hooks implements
     /** @var array<non-negative-int, array<class-string<Protocol\Frame>, list<DeferredFuture<Protocol\Frame>>>> */
     private array $defers = [];
 
-    /** @var array<string, DeferredFuture<Protocol\Frame>> */
+    /** @var array<non-negative-int, array<int, DeferredFuture<Protocol\Frame>>> */
     private array $queue = [];
+
+    /**
+     * @template T of Protocol\Frame
+     * @param non-negative-int $channelId
+     * @param class-string<T> ...$frameTypes
+     * @return Future<T>
+     */
+    public function subscribeAny(int $channelId, string ...$frameTypes): Future
+    {
+        $futures = [];
+
+        foreach ($frameTypes as $frameType) {
+            $futures[] = $this->subscribe($channelId, $frameType);
+        }
+
+        /** @var DeferredFuture<T> $deferred */
+        $deferred = new DeferredFuture();
+        EventLoop::queue(static function () use ($deferred, $futures): void {
+            $deferred->complete(Future\awaitFirst($futures));
+        });
+
+        return $deferred->getFuture();
+    }
 
     /**
      * @template T of Protocol\Frame
@@ -33,9 +57,17 @@ final class Hooks implements
         /** @var DeferredFuture<T> $deferred */
         $deferred = new DeferredFuture();
         $this->defers[$channelId][$frameType][] = $deferred;
-        $this->queue[spl_object_hash($deferred)] = $deferred;
+        $this->queue[$channelId][spl_object_id($deferred)] = $deferred;
 
         return $deferred->getFuture();
+    }
+
+    /**
+     * @param non-negative-int $channelId
+     */
+    public function unsubscribe(int $channelId): void
+    {
+        unset($this->defers[$channelId], $this->queue[$channelId]);
     }
 
     public function emit(Protocol\Request ...$requests): void
@@ -43,7 +75,7 @@ final class Hooks implements
         foreach ($requests as $request) {
             foreach ($this->defers[$request->channelId][$request->frame::class] ?? [] as $i => $f) {
                 $f->complete($request->frame);
-                unset($this->defers[$request->channelId][$request->frame::class][$i], $this->queue[spl_object_hash($f)]);
+                unset($this->defers[$request->channelId][$request->frame::class][$i], $this->queue[$request->channelId][spl_object_id($f)]);
             }
         }
     }
@@ -64,7 +96,13 @@ final class Hooks implements
 
     public function getIterator(): \Traversable
     {
-        yield from $this->queue;
+        foreach ($this->queue as $channelId => $deferred) {
+            if (($futureId = array_key_first($deferred)) !== null) {
+                if (($future = $deferred[$futureId] ?? null) !== null) {
+                    yield $channelId => $future;
+                }
+            }
+        }
     }
 
     public function count(): int

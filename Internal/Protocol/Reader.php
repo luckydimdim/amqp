@@ -6,6 +6,7 @@ namespace Typhoon\Amqp091\Internal\Protocol;
 
 use Typhoon\Amqp091\Exception\UnsupportedClassMethod;
 use Typhoon\Amqp091\Internal\Io;
+use Typhoon\Amqp091\Internal\Protocol\Frame\ChannelCloseOk;
 use Typhoon\Amqp091\Internal\Protocol\Frame\ChannelOpenOkFrame;
 use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionOpenOk;
 use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionStart;
@@ -39,6 +40,7 @@ final class Reader
         ],
         ClassType::CHANNEL => [
             ClassMethod::CHANNEL_OPEN_OK => ChannelOpenOkFrame::class,
+            ClassMethod::CHANNEL_CLOSE_OK => ChannelCloseOk::class,
         ],
         ClassType::EXCHANGE => [
             ClassMethod::EXCHANGE_DECLARE_OK => ExchangeDeclareOk::class,
