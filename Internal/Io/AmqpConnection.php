@@ -10,7 +10,6 @@ use Revolt\EventLoop;
 use Typhoon\AmpBridge\AmpReaderWriter;
 use Typhoon\Amqp091\Internal\Hooks;
 use Typhoon\Amqp091\Internal\Protocol;
-use Typhoon\Amqp091\Internal\WriterTo;
 use Typhoon\ByteBuffer\BufferedReaderWriter;
 use Typhoon\ByteOrder\ReaderWriter;
 use Typhoon\ByteWriter\Writer;

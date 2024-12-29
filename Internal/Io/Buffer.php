@@ -6,7 +6,6 @@ namespace Typhoon\Amqp091\Internal\Io;
 
 use Typhoon\Amqp091\Exception\UnknownValueType;
 use Typhoon\Amqp091\Internal\Protocol\Type;
-use Typhoon\Amqp091\Internal\WriterTo;
 use Typhoon\ByteWriter\Writer;
 use Typhoon\Endian\endian;
 

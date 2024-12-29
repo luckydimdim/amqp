@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Typhoon\Amqp091\Internal;
+namespace Typhoon\Amqp091\Internal\Io;
 
 use Typhoon\ByteWriter\Writer;
 
