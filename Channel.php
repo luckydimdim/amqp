@@ -111,6 +111,27 @@ final class Channel
     }
 
     /**
+     * @param non-empty-string $exchange
+     * @throws \Throwable
+     */
+    public function exchangeDelete(
+        string $exchange,
+        bool $ifUnused = false,
+        bool $noWait = false,
+    ): void {
+        $this->connection->writeFrame(Protocol\Method::exchangeDelete(
+            channelId: $this->channelId,
+            exchange: $exchange,
+            ifUnused: $ifUnused,
+            noWait: $noWait,
+        ));
+
+        if (!$noWait) {
+            $this->await(Frame\ExchangeDeleteOk::class);
+        }
+    }
+
+    /**
      * @param array<string, mixed> $arguments
      * @throws \Throwable
      * @psalm-return ($noWait is true ? null : Queue)

@@ -176,6 +176,28 @@ final class Method implements Frame
 
     /**
      * @param non-negative-int $channelId
+     * @param non-empty-string $exchange
+     */
+    public static function exchangeDelete(
+        int $channelId,
+        string $exchange,
+        bool $ifUnused = false,
+        bool $noWait = false,
+    ): self {
+        return new self(
+            ClassType::EXCHANGE,
+            ClassMethod::EXCHANGE_DELETE,
+            new Frame\ExchangeDelete(
+                exchange: $exchange,
+                ifUnused: $ifUnused,
+                noWait: $noWait,
+            ),
+            $channelId,
+        );
+    }
+
+    /**
+     * @param non-negative-int $channelId
      * @param array<string, mixed> $arguments
      */
     public static function queueDeclare(
