@@ -106,13 +106,35 @@ final class Channel
             queue: $queue,
             exchange: $exchange,
             routingKey: $routingKey,
-            noWait: $noWait,
             arguments: $arguments,
+            noWait: $noWait,
         ));
 
         if (!$noWait) {
             $this->await(Frame\QueueBindOk::class);
         }
+    }
+
+    /**
+     * @param non-empty-string $queue
+     * @param array<string, mixed> $arguments
+     * @throws \Throwable
+     */
+    public function queueUnbind(
+        string $queue,
+        string $exchange = '',
+        string $routingKey = '',
+        array $arguments = [],
+    ): void {
+        $this->connection->writeFrame(Protocol\Method::queueUnbind(
+            channelId: $this->channelId,
+            queue: $queue,
+            exchange: $exchange,
+            routingKey: $routingKey,
+            arguments: $arguments,
+        ));
+
+        $this->await(Frame\QueueUnbindOk::class);
     }
 
     /**

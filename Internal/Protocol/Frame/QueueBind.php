@@ -20,8 +20,8 @@ final class QueueBind implements Frame
         public readonly string $queue,
         public readonly string $exchange,
         public readonly string $routingKey,
-        public readonly bool $noWait,
         public readonly array $arguments = [],
+        public readonly bool $noWait = false,
         public readonly int $reserved1 = 0,
     ) {}
 
@@ -38,8 +38,8 @@ final class QueueBind implements Frame
             $queue,
             $exchange,
             $routingKey,
-            $noWait,
             $arguments,
+            $noWait,
             $reserved1,
         );
     }

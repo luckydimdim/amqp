@@ -157,8 +157,8 @@ final class Method implements Frame
         string $queue,
         string $exchange,
         string $routingKey,
-        bool $noWait = false,
         array $arguments = [],
+        bool $noWait = false,
     ): self {
         return new self(
             ClassType::QUEUE,
@@ -167,7 +167,32 @@ final class Method implements Frame
                 queue: $queue,
                 exchange: $exchange,
                 routingKey: $routingKey,
+                arguments: $arguments,
                 noWait: $noWait,
+            ),
+            $channelId,
+        );
+    }
+
+    /**
+     * @param non-negative-int $channelId
+     * @param non-empty-string $queue
+     * @param array<string, mixed> $arguments
+     */
+    public static function queueUnbind(
+        int $channelId,
+        string $queue,
+        string $exchange,
+        string $routingKey,
+        array $arguments = [],
+    ): self {
+        return new self(
+            ClassType::QUEUE,
+            ClassMethod::QUEUE_UNBIND,
+            new Frame\QueueUnbind(
+                queue: $queue,
+                exchange: $exchange,
+                routingKey: $routingKey,
                 arguments: $arguments,
             ),
             $channelId,

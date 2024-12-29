@@ -419,7 +419,7 @@ final class Buffer implements
         /** @var non-empty-string $v */
         $v = substr($this->buffer, $this->readCursor, $n);
         $this->readCursor += $n;
-        $this->writeCursor -= $n;
+        $this->writeCursor = max($this->writeCursor - $n, 0);
 
         return $v;
     }
