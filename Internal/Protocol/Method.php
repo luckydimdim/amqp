@@ -148,6 +148,34 @@ final class Method implements Frame
 
     /**
      * @param non-negative-int $channelId
+     * @param non-empty-string $destination
+     * @param non-empty-string $source
+     * @param array<string, mixed> $arguments
+     */
+    public static function exchangeUnbind(
+        int $channelId,
+        string $destination,
+        string $source,
+        string $routingKey,
+        array $arguments = [],
+        bool $noWait = false,
+    ): self {
+        return new self(
+            ClassType::EXCHANGE,
+            ClassMethod::EXCHANGE_UNBIND,
+            new Frame\ExchangeUnbind(
+                destination: $destination,
+                source: $source,
+                routingKey: $routingKey,
+                arguments: $arguments,
+                noWait: $noWait,
+            ),
+            $channelId,
+        );
+    }
+
+    /**
+     * @param non-negative-int $channelId
      * @param array<string, mixed> $arguments
      */
     public static function queueDeclare(

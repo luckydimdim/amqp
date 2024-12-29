@@ -11,7 +11,7 @@ use Typhoon\Amqp091\Internal\Protocol\Frame;
  * @internal
  * @psalm-internal Typhoon\Amqp091
  */
-final class ExchangeBind implements Frame
+final class ExchangeUnbind implements Frame
 {
     /**
      * @param non-empty-string $destination

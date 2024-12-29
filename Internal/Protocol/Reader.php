@@ -12,6 +12,7 @@ use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionStart;
 use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionTune;
 use Typhoon\Amqp091\Internal\Protocol\Frame\ExchangeBindOk;
 use Typhoon\Amqp091\Internal\Protocol\Frame\ExchangeDeclareOk;
+use Typhoon\Amqp091\Internal\Protocol\Frame\ExchangeUnbindOk;
 use Typhoon\Amqp091\Internal\Protocol\Frame\QueueBindOk;
 use Typhoon\Amqp091\Internal\Protocol\Frame\QueueDeclareOk;
 use Typhoon\Amqp091\Internal\Protocol\Frame\QueueDeleteOk;
@@ -41,6 +42,7 @@ final class Reader
         ClassType::EXCHANGE => [
             ClassMethod::EXCHANGE_DECLARE_OK => ExchangeDeclareOk::class,
             ClassMethod::EXCHANGE_BIND_OK => ExchangeBindOk::class,
+            ClassMethod::EXCHANGE_UNBIND_OK => ExchangeUnbindOk::class,
         ],
         ClassType::QUEUE => [
             ClassMethod::QUEUE_DECLARE_OK => QueueDeclareOk::class,
