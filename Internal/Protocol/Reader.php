@@ -13,6 +13,7 @@ use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionTune;
 use Typhoon\Amqp091\Internal\Protocol\Frame\ExchangeDeclareOk;
 use Typhoon\Amqp091\Internal\Protocol\Frame\QueueBindOk;
 use Typhoon\Amqp091\Internal\Protocol\Frame\QueueDeclareOk;
+use Typhoon\Amqp091\Internal\Protocol\Frame\QueueDeleteOk;
 use Typhoon\Amqp091\Internal\Protocol\Frame\QueuePurgeOk;
 use Typhoon\Amqp091\Internal\Protocol\Frame\QueueUnbindOk;
 use Typhoon\ByteOrder\ReadFrom;
@@ -44,6 +45,7 @@ final class Reader
             ClassMethod::QUEUE_BIND_OK => QueueBindOk::class,
             ClassMethod::QUEUE_UNBIND_OK => QueueUnbindOk::class,
             ClassMethod::QUEUE_PURGE_OK => QueuePurgeOk::class,
+            ClassMethod::QUEUE_DELETE_OK => QueueDeleteOk::class,
         ],
     ];
 

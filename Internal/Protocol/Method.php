@@ -216,6 +216,30 @@ final class Method implements Frame
         );
     }
 
+    /**
+     * @param non-negative-int $channelId
+     * @param non-empty-string $queue
+     */
+    public static function queueDelete(
+        int $channelId,
+        string $queue,
+        bool $ifUnused = false,
+        bool $ifEmpty = false,
+        bool $noWait = false,
+    ): self {
+        return new self(
+            ClassType::QUEUE,
+            ClassMethod::QUEUE_DELETE,
+            new Frame\QueueDelete(
+                queue: $queue,
+                ifUnused: $ifUnused,
+                ifEmpty: $ifEmpty,
+                noWait: $noWait,
+            ),
+            $channelId,
+        );
+    }
+
     public static function read(Io\ReadBytes $reader): self
     {
         throw new \BadMethodCallException('Not implemented yet.');

@@ -158,6 +158,32 @@ final class Channel
     }
 
     /**
+     * @param non-empty-string $queue
+     * @return ($noWait is true ? null : non-negative-int)
+     * @throws \Throwable
+     */
+    public function queueDelete(
+        string $queue,
+        bool $ifUnused = false,
+        bool $ifEmpty = false,
+        bool $noWait = false,
+    ): ?int {
+        $this->connection->writeFrame(Protocol\Method::queueDelete(
+            channelId: $this->channelId,
+            queue: $queue,
+            ifUnused: $ifUnused,
+            ifEmpty: $ifEmpty,
+            noWait: $noWait,
+        ));
+
+        if ($noWait) {
+            return null;
+        }
+
+        return $this->await(Frame\QueueDeleteOk::class)->messages;
+    }
+
+    /**
      * @template T of Protocol\Frame
      * @param class-string<T> $frameType
      * @return T
