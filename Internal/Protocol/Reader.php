@@ -4,24 +4,7 @@ declare(strict_types=1);
 
 namespace Typhoon\Amqp091\Internal\Protocol;
 
-use Typhoon\Amqp091\Exception\UnsupportedClassMethod;
 use Typhoon\Amqp091\Internal\Io;
-use Typhoon\Amqp091\Internal\Protocol\Frame\ChannelCloseOk;
-use Typhoon\Amqp091\Internal\Protocol\Frame\ChannelOpenOkFrame;
-use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionClose;
-use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionCloseOk;
-use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionOpenOk;
-use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionStart;
-use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionTune;
-use Typhoon\Amqp091\Internal\Protocol\Frame\ExchangeBindOk;
-use Typhoon\Amqp091\Internal\Protocol\Frame\ExchangeDeclareOk;
-use Typhoon\Amqp091\Internal\Protocol\Frame\ExchangeDeleteOk;
-use Typhoon\Amqp091\Internal\Protocol\Frame\ExchangeUnbindOk;
-use Typhoon\Amqp091\Internal\Protocol\Frame\QueueBindOk;
-use Typhoon\Amqp091\Internal\Protocol\Frame\QueueDeclareOk;
-use Typhoon\Amqp091\Internal\Protocol\Frame\QueueDeleteOk;
-use Typhoon\Amqp091\Internal\Protocol\Frame\QueuePurgeOk;
-use Typhoon\Amqp091\Internal\Protocol\Frame\QueueUnbindOk;
 use Typhoon\ByteOrder\ReadFrom;
 
 /**
@@ -32,34 +15,6 @@ final class Reader
 {
     /** @var int */
     private const HEADER_SIZE = 7;
-
-    /** @var array<ClassType::*, array<ClassMethod::*, class-string<Frame>>> */
-    private const METHODS = [
-        ClassType::CONNECTION => [
-            ClassMethod::CONNECTION_START => ConnectionStart::class,
-            ClassMethod::CONNECTION_TUNE => ConnectionTune::class,
-            ClassMethod::CONNECTION_OPEN_OK => ConnectionOpenOk::class,
-            ClassMethod::CONNECTION_CLOSE => ConnectionClose::class,
-            ClassMethod::CONNECTION_CLOSE_OK => ConnectionCloseOk::class,
-        ],
-        ClassType::CHANNEL => [
-            ClassMethod::CHANNEL_OPEN_OK => ChannelOpenOkFrame::class,
-            ClassMethod::CHANNEL_CLOSE_OK => ChannelCloseOk::class,
-        ],
-        ClassType::EXCHANGE => [
-            ClassMethod::EXCHANGE_DECLARE_OK => ExchangeDeclareOk::class,
-            ClassMethod::EXCHANGE_BIND_OK => ExchangeBindOk::class,
-            ClassMethod::EXCHANGE_UNBIND_OK => ExchangeUnbindOk::class,
-            ClassMethod::EXCHANGE_DELETE_OK => ExchangeDeleteOk::class,
-        ],
-        ClassType::QUEUE => [
-            ClassMethod::QUEUE_DECLARE_OK => QueueDeclareOk::class,
-            ClassMethod::QUEUE_BIND_OK => QueueBindOk::class,
-            ClassMethod::QUEUE_UNBIND_OK => QueueUnbindOk::class,
-            ClassMethod::QUEUE_PURGE_OK => QueuePurgeOk::class,
-            ClassMethod::QUEUE_DELETE_OK => QueueDeleteOk::class,
-        ],
-    ];
 
     private readonly ReadFrom $reader;
 
@@ -91,26 +46,12 @@ final class Reader
         }
 
         yield match ($type) {
-            FrameType::method => $this->parseMethodFrame($channelId),
+            FrameType::method => Protocol::amqp091->parseMethod($this->buffer, $channelId),
             default => throw new \Exception('Not implemented yet'),
         };
 
-        if ($this->reader->readUint8() !== 206) {
+        if ($this->reader->readUint8() !== Protocol::FRAME_END) {
             throw new \Exception('Bad frame.');
         }
-    }
-
-    /**
-     * @param non-negative-int $channelId
-     * @throws \Throwable
-     */
-    private function parseMethodFrame(int $channelId): Request
-    {
-        $classId = $this->buffer->readUint16();
-        $methodId = $this->buffer->readUint16();
-
-        $frame = (self::METHODS[$classId][$methodId] ?? throw UnsupportedClassMethod::forClassMethod($classId, $methodId))::read($this->buffer);
-
-        return new Request($channelId, $frame);
     }
 }
