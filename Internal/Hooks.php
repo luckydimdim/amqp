@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Typhoon\Amqp091\Internal\Connection;
+namespace Typhoon\Amqp091\Internal;
 
 use Amp\DeferredFuture;
 use Amp\Future;

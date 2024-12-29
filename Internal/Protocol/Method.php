@@ -176,7 +176,7 @@ final class Method implements Frame
 
     public static function read(Io\ReadBytes $reader): self
     {
-        return new self();
+        throw new \BadMethodCallException('Not implemented yet.');
     }
 
     /**

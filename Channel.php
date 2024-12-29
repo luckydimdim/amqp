@@ -6,8 +6,7 @@ namespace Typhoon\Amqp091;
 
 use Amp\Cancellation;
 use Amp\NullCancellation;
-use Typhoon\Amqp091\Internal\Connection\AmqpConnection;
-use Typhoon\Amqp091\Internal\Io;
+use Typhoon\Amqp091\Internal\Io\AmqpConnection;
 use Typhoon\Amqp091\Internal\Protocol;
 use Typhoon\Amqp091\Internal\Protocol\Frame;
 
@@ -16,17 +15,13 @@ use Typhoon\Amqp091\Internal\Protocol\Frame;
  */
 final class Channel
 {
-    private readonly Io\Buffer $buffer;
-
     /**
      * @param non-negative-int $channelId
      */
     public function __construct(
         private readonly int $channelId,
         private readonly AmqpConnection $connection,
-    ) {
-        $this->buffer = Io\Buffer::alloc();
-    }
+    ) {}
 
     /**
      * @param non-empty-string $exchange
@@ -44,7 +39,7 @@ final class Channel
         bool $noWait = false,
         array $arguments = [],
     ): void {
-        $this->write(Protocol\Method::exchangeDeclare(
+        $this->connection->writeFrame(Protocol\Method::exchangeDeclare(
             channelId: $this->channelId,
             exchange: $exchange,
             exchangeType: $exchangeType,
@@ -75,7 +70,7 @@ final class Channel
         bool $noWait = false,
         array $arguments = [],
     ): ?Queue {
-        $this->write(Protocol\Method::queueDeclare(
+        $this->connection->writeFrame(Protocol\Method::queueDeclare(
             channelId: $this->channelId,
             queue: $queue,
             passive: $passive,
@@ -106,7 +101,7 @@ final class Channel
         bool $noWait = false,
         array $arguments = [],
     ): void {
-        $this->write(Protocol\Method::queueBind(
+        $this->connection->writeFrame(Protocol\Method::queueBind(
             channelId: $this->channelId,
             queue: $queue,
             exchange: $exchange,
@@ -118,11 +113,6 @@ final class Channel
         if (!$noWait) {
             $this->await(Frame\QueueBindOk::class);
         }
-    }
-
-    private function write(Frame $frame): void
-    {
-        $this->connection->writeAt($frame->write($this->buffer));
     }
 
     /**

@@ -17,6 +17,7 @@ final class ExchangeDeclare implements Frame
      * @param non-empty-string $exchange
      * @param non-empty-string $exchangeType
      * @param array<string, mixed> $arguments
+     * @param non-negative-int $reserved1
      */
     public function __construct(
         public readonly string $exchange,
@@ -33,9 +34,17 @@ final class ExchangeDeclare implements Frame
     public static function read(Io\ReadBytes $reader): Frame
     {
         $reserved1 = $reader->readUint16();
+
         $exchange = $reader->readString();
+        \assert($exchange !== '', 'exchange must not be empty.');
+
         $exchangeType = $reader->readString();
-        [$passive, $durable, $autoDelete, $internal, $noWait] = $reader->readBits(5);
+        \assert($exchangeType !== '', 'exchange type must not be empty.');
+
+        /** @var array{bool, bool, bool, bool, bool} $bits */
+        $bits = $reader->readBits(5);
+
+        [$passive, $durable, $autoDelete, $internal, $noWait] = $bits;
         $arguments = $reader->readTable();
 
         return new self(

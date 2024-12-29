@@ -24,8 +24,11 @@ final class ConnectionOpen implements Frame
 
     public static function read(Io\ReadBytes $reader): self
     {
+        $vhost = $reader->readString();
+        \assert($vhost !== '', 'vhost must not be empty.');
+
         return new self(
-            $reader->readString(),
+            $vhost,
             $reader->readString(),
             $reader->readBits(1)[0] ?? false,
         );

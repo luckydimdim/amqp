@@ -138,7 +138,7 @@ final class Buffer implements
 
     public function writeTable(array $values): self
     {
-        return $this->reserve($this->endian->packUint32(...), static function (self $buffer) use ($values): void {
+        return $this->reserve($this->endian->packUint32(...), static function (WriteBytes $buffer) use ($values): void {
             foreach ($values as $key => $value) {
                 $buffer = $buffer
                     ->writeString((string) $key)
@@ -149,7 +149,7 @@ final class Buffer implements
 
     public function writeArray(array $values): self
     {
-        return $this->reserve($this->endian->packUint32(...), static function (self $buffer) use ($values): void {
+        return $this->reserve($this->endian->packUint32(...), static function (WriteBytes $buffer) use ($values): void {
             foreach ($values as $value) {
                 $buffer = $buffer->writeValue($value);
             }
@@ -319,13 +319,6 @@ final class Buffer implements
     public function read(int $n): string
     {
         return $this->consume($n);
-    }
-
-    public function discard(int $limit): self
-    {
-        $this->consume($limit);
-
-        return $this;
     }
 
     public function readValue(): mixed

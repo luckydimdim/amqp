@@ -18,7 +18,7 @@ enum ProtocolHeader implements Frame
     public static function read(Io\ReadBytes $reader): self
     {
         // len('AMQP') + 4 * len(uint8).
-        $reader->discard(8);
+        $reader->read(8);
 
         return self::frame;
     }

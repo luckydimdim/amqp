@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Typhoon\Amqp091\Internal\Connection;
+namespace Typhoon\Amqp091\Internal\Io;
 
 use Amp\Future;
 use Amp\Socket\Socket;
 use Revolt\EventLoop;
 use Typhoon\AmpBridge\AmpReaderWriter;
+use Typhoon\Amqp091\Internal\Hooks;
 use Typhoon\Amqp091\Internal\Protocol;
 use Typhoon\Amqp091\Internal\WriterTo;
 use Typhoon\ByteBuffer\BufferedReaderWriter;
@@ -24,9 +25,12 @@ final class AmqpConnection implements Writer
 
     private readonly Hooks $hooks;
 
+    private readonly Buffer $buffer;
+
     public function __construct(Socket $socket)
     {
         $this->socket = $socket;
+        $this->buffer = Buffer::alloc();
 
         $hooks = new Hooks();
         $this->hooks = $hooks;
@@ -61,6 +65,16 @@ final class AmqpConnection implements Writer
     public function subscribe(int $channelId, string $frameType): Future
     {
         return $this->hooks->subscribe($channelId, $frameType);
+    }
+
+    /**
+     * @throws \Throwable
+     */
+    public function writeFrame(Protocol\Frame $frame): void
+    {
+        $frame
+            ->write($this->buffer)
+            ->writeTo($this);
     }
 
     public function writeAt(WriterTo $to): void

@@ -79,9 +79,4 @@ interface ReadBytes
      * @return list<bool>
      */
     public function readBits(int $n): array;
-
-    /**
-     * @param positive-int $limit
-     */
-    public function discard(int $limit): self;
 }

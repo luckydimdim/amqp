@@ -8,8 +8,7 @@ use Amp\Cancellation;
 use Amp\CancelledException;
 use Amp\NullCancellation;
 use Amp\Socket;
-use Typhoon\Amqp091\Internal\Connection\AmqpConnection;
-use Typhoon\Amqp091\Internal\Io;
+use Typhoon\Amqp091\Internal\Io\AmqpConnection;
 use Typhoon\Amqp091\Internal\Protocol;
 use Typhoon\Amqp091\Internal\Protocol\Frame;
 use Typhoon\Amqp091\Internal\Protocol\Frame\ChannelOpenOkFrame;
@@ -35,8 +34,6 @@ final class Client
     /** @var ClientProperties */
     private array $properties;
 
-    private readonly Io\Buffer $buffer;
-
     public function __construct(private readonly Uri $uri)
     {
         $this->properties = [
@@ -49,13 +46,12 @@ final class Client
                 'publisher_confirms' => true,
             ],
         ];
-
-        $this->buffer = Io\Buffer::alloc();
     }
 
     /**
      * @throws Socket\ConnectException
      * @throws CancelledException
+     * @throws \Throwable
      */
     public function connect(Cancellation $cancellation = new NullCancellation()): void
     {
@@ -64,7 +60,7 @@ final class Client
                 Socket\connect($this->uri->connectionDsn()),
             );
 
-            $this->connection->writeAt(Frame\ProtocolHeader::frame->write($this->buffer));
+            $this->connection->writeFrame(Frame\ProtocolHeader::frame);
 
             $this->connectionStart(
                 $this->await(ConnectionStart::class, cancellation: $cancellation),
@@ -86,32 +82,53 @@ final class Client
         return new Channel($channelId, $this->connection ?: throw new \LogicException('Connection is closed.'));
     }
 
-    private function connectionStart(ConnectionStart $start): void
+    /**
+     * @throws \Throwable
+     */
+    private function connectionStart(ConnectionStart $_): void
     {
-        $this->write(Protocol\Method::connectionStartOk($start->serverProperties, 'AMQPLAIN', $this->uri->username, $this->uri->password));
+        $this->connection?->writeFrame(
+            Protocol\Method::connectionStartOk($this->properties, 'AMQPLAIN', $this->uri->username, $this->uri->password),
+        );
     }
 
+    /**
+     * @throws \Throwable
+     */
     private function connectionTune(ConnectionTune $tune): void
     {
         $heartbeat = (int) min($this->uri->heartbeat, $tune->heartbeat / 1000);
-        $maxChannel = min($this->uri->channelMax, $tune->channelMax);
-        $maxFrame = min($this->uri->frameMax, $tune->frameMax);
+        \assert($heartbeat >= 0, 'heartbeat must not be negative.');
 
-        $this->write(Protocol\Method::connectionTuneOk($maxChannel, $maxFrame, $heartbeat));
+        $maxChannel = min($this->uri->channelMax, $tune->channelMax);
+        \assert($maxChannel >= 0, 'max channel must not be negative.');
+
+        $maxFrame = min($this->uri->frameMax, $tune->frameMax);
+        \assert($maxFrame >= 0, 'max frame must not be negative.');
+
+        $this->connection?->writeFrame(
+            Protocol\Method::connectionTuneOk($maxChannel, $maxFrame, $heartbeat),
+        );
     }
 
+    /**
+     * @throws \Throwable
+     */
     private function connectionOpen(Cancellation $cancellation): void
     {
-        $this->write(Protocol\Method::connectionOpen($this->uri->vhost));
+        $this->connection?->writeFrame(Protocol\Method::connectionOpen($this->uri->vhost));
+
         $this->await(ConnectionOpenOk::class, cancellation: $cancellation);
     }
 
     /**
      * @param non-negative-int $channelId
+     * @throws \Throwable
      */
     private function openChannel(int $channelId, Cancellation $cancellation = new NullCancellation()): void
     {
-        $this->write(Protocol\Method::channelOpen($channelId));
+        $this->connection?->writeFrame(Protocol\Method::channelOpen($channelId));
+
         $this->await(ChannelOpenOkFrame::class, $channelId, $cancellation);
     }
 
@@ -137,11 +154,6 @@ final class Client
         }
 
         throw Exception\NoAvailableChannel::forMaxChannel($this->uri->channelMax);
-    }
-
-    private function write(Frame $frame): void
-    {
-        $this->connection?->writeAt($frame->write($this->buffer));
     }
 
     /**

@@ -27,7 +27,7 @@ final class ConnectionStartOk implements Frame
 
     public static function read(Io\ReadBytes $reader): self
     {
-        return new self();
+        throw new \BadMethodCallException('Not implemented yet.');
     }
 
     public function write(Io\WriteBytes $writer): Io\WriteBytes
