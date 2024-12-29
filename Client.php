@@ -67,9 +67,37 @@ final class Client
             );
 
             $this->connectionOpen($cancellation);
+
+            $this->connection->subscribe(0, Frame\ConnectionClose::class)->map(function (Frame\ConnectionClose $_): void {
+                $this->connection?->writeFrame(Protocol\Method::connectionCloseOk());
+                $this->connection?->close();
+
+                // TODO Throw exception to the channel queue.
+
+                $this->channels = [];
+            });
         }
     }
 
+    /**
+     * @param non-negative-int $replyCode
+     * @throws \Throwable
+     */
+    public function disconnect(int $replyCode = 200, string $replyText = '', Cancellation $cancellation = new NullCancellation()): void
+    {
+        foreach ($this->channels as $channel) {
+            $channel->close($replyCode, $replyText);
+        }
+
+        $this->channels = [];
+
+        $this->connectionClose($replyCode, $replyText, $cancellation);
+        $this->connection?->close();
+    }
+
+    /**
+     * @throws \Throwable
+     */
     public function channel(Cancellation $cancellation = new NullCancellation()): Channel
     {
         $channelId = $this->allocateChannelId();
@@ -115,6 +143,17 @@ final class Client
         $this->connection?->writeFrame(Protocol\Method::connectionOpen($this->uri->vhost));
 
         $this->await(Frame\ConnectionOpenOk::class, cancellation: $cancellation);
+    }
+
+    /**
+     * @param non-negative-int $replyCode
+     * @throws \Throwable
+     */
+    private function connectionClose(int $replyCode, string $replyText = '', Cancellation $cancellation = new NullCancellation()): void
+    {
+        $this->connection?->writeFrame(Protocol\Method::connectionClose($replyCode, $replyText));
+
+        $this->await(Frame\ConnectionCloseOk::class, cancellation: $cancellation);
     }
 
     /**

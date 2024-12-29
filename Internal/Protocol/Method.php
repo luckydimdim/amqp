@@ -72,6 +72,29 @@ final class Method implements Frame
     }
 
     /**
+     * @param non-negative-int $replyCode
+     */
+    public static function connectionClose(
+        int $replyCode = 200,
+        string $replyText = '',
+    ): self {
+        return new self(
+            ClassType::CONNECTION,
+            ClassMethod::CONNECTION_CLOSE,
+            new Frame\ConnectionClose($replyCode, $replyText),
+        );
+    }
+
+    public static function connectionCloseOk(): self
+    {
+        return new self(
+            ClassType::CONNECTION,
+            ClassMethod::CONNECTION_CLOSE_OK,
+            Frame\ConnectionCloseOk::frame,
+        );
+    }
+
+    /**
      * @param non-negative-int $channelId
      */
     public static function channelOpen(int $channelId): self

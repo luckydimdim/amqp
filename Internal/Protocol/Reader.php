@@ -8,6 +8,8 @@ use Typhoon\Amqp091\Exception\UnsupportedClassMethod;
 use Typhoon\Amqp091\Internal\Io;
 use Typhoon\Amqp091\Internal\Protocol\Frame\ChannelCloseOk;
 use Typhoon\Amqp091\Internal\Protocol\Frame\ChannelOpenOkFrame;
+use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionClose;
+use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionCloseOk;
 use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionOpenOk;
 use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionStart;
 use Typhoon\Amqp091\Internal\Protocol\Frame\ConnectionTune;
@@ -37,6 +39,8 @@ final class Reader
             ClassMethod::CONNECTION_START => ConnectionStart::class,
             ClassMethod::CONNECTION_TUNE => ConnectionTune::class,
             ClassMethod::CONNECTION_OPEN_OK => ConnectionOpenOk::class,
+            ClassMethod::CONNECTION_CLOSE => ConnectionClose::class,
+            ClassMethod::CONNECTION_CLOSE_OK => ConnectionCloseOk::class,
         ],
         ClassType::CHANNEL => [
             ClassMethod::CHANNEL_OPEN_OK => ChannelOpenOkFrame::class,
