@@ -57,6 +57,33 @@ final class Channel
     }
 
     /**
+     * @param non-empty-string $destination
+     * @param non-empty-string $source
+     * @param array<string, mixed> $arguments
+     * @throws \Throwable
+     */
+    public function exchangeBind(
+        string $destination,
+        string $source,
+        string $routingKey = '',
+        array $arguments = [],
+        bool $noWait = false,
+    ): void {
+        $this->connection->writeFrame(Protocol\Method::exchangeBind(
+            channelId: $this->channelId,
+            destination: $destination,
+            source: $source,
+            routingKey: $routingKey,
+            arguments: $arguments,
+            noWait: $noWait,
+        ));
+
+        if (!$noWait) {
+            $this->await(Frame\ExchangeBindOk::class);
+        }
+    }
+
+    /**
      * @param array<string, mixed> $arguments
      * @throws \Throwable
      * @psalm-return ($noWait is true ? null : Queue)
