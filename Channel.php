@@ -138,6 +138,26 @@ final class Channel
     }
 
     /**
+     * @param non-empty-string $queue
+     * @return ($noWait is true ? null : non-negative-int)
+     * @throws \Throwable
+     */
+    public function queuePurge(string $queue, bool $noWait = false): ?int
+    {
+        $this->connection->writeFrame(Protocol\Method::queuePurge(
+            channelId: $this->channelId,
+            queue: $queue,
+            noWait: $noWait,
+        ));
+
+        if ($noWait) {
+            return null;
+        }
+
+        return $this->await(Frame\QueuePurgeOk::class)->messages;
+    }
+
+    /**
      * @template T of Protocol\Frame
      * @param class-string<T> $frameType
      * @return T

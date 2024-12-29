@@ -199,6 +199,23 @@ final class Method implements Frame
         );
     }
 
+    /**
+     * @param non-negative-int $channelId
+     * @param non-empty-string $queue
+     */
+    public static function queuePurge(
+        int $channelId,
+        string $queue,
+        bool $noWait = false,
+    ): self {
+        return new self(
+            ClassType::QUEUE,
+            ClassMethod::QUEUE_PURGE,
+            new Frame\QueuePurge($queue, $noWait),
+            $channelId,
+        );
+    }
+
     public static function read(Io\ReadBytes $reader): self
     {
         throw new \BadMethodCallException('Not implemented yet.');
