@@ -192,7 +192,7 @@ final class Client
      */
     private function allocateChannelId(): int
     {
-        for ($id = $this->channelId; $id <= $this->uri->channelMax; ++$id) {
+        for ($id = $this->channelId; $id <= $this->properties->maxChannel(); ++$id) {
             if (!isset($this->channels[$id])) {
                 $this->channelId = $id + 1;
 
@@ -208,7 +208,7 @@ final class Client
             }
         }
 
-        throw Exception\NoAvailableChannel::forMaxChannel($this->uri->channelMax);
+        throw Exception\NoAvailableChannel::forMaxChannel($this->properties->maxChannel());
     }
 
     /**
