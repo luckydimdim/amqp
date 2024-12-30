@@ -6,9 +6,11 @@ namespace Typhoon\Amqp091;
 
 use Amp\Cancellation;
 use Amp\CancelledException;
+use Amp\DeferredFuture;
 use Amp\NullCancellation;
 use Amp\Socket;
 use Typhoon\Amqp091\Internal\Io\AmqpConnection;
+use Typhoon\Amqp091\Internal\Monitor;
 use Typhoon\Amqp091\Internal\Properties;
 use Typhoon\Amqp091\Internal\Protocol;
 use Typhoon\Amqp091\Internal\Protocol\Auth;
@@ -29,9 +31,12 @@ final class Client
 
     private readonly Properties $properties;
 
+    private readonly Monitor $monitor;
+
     public function __construct(private readonly Uri $uri)
     {
         $this->properties = Properties::createDefault();
+        $this->monitor = new Monitor();
     }
 
     /**
@@ -58,13 +63,18 @@ final class Client
 
             $this->connectionOpen($cancellation);
 
-            $this->connection->subscribe(0, Frame\ConnectionClose::class)->map(function (Frame\ConnectionClose $_): void {
+            $this->connection->subscribe(0, Frame\ConnectionClose::class)->map(function (Frame\ConnectionClose $close): void {
                 $this->connection?->writeFrame(Protocol\Method::connectionCloseOk());
                 $this->connection?->close();
 
-                // TODO Throw exception to the channel queue.
+                $error = Exception\ConnectionWasClosed::byServer($close->replyCode, $close->replyText);
+
+                foreach ($this->channels as $channel) {
+                    $channel->abandon($error);
+                }
 
                 $this->channels = [];
+                $this->monitor->cancel($error);
             });
         }
     }
@@ -163,11 +173,16 @@ final class Client
         $this->connection
             ?->subscribeAny($channelId, Frame\ChannelCloseOk::class, Frame\ChannelClose::class)
             ->map(function (Frame\ChannelCloseOk|Frame\ChannelClose $frame) use ($channelId): void {
-                $this->connection?->unsubscribe($channelId);
-                unset($this->channels[$channelId]);
+                $channel = $this->channels[$channelId] ?? null;
 
-                if ($frame instanceof Frame\ChannelClose) {
-                    $this->connection?->writeFrame(Protocol\Method::channelCloseOk($channelId));
+                if ($channel !== null) {
+                    $this->connection?->unsubscribe($channelId);
+                    unset($this->channels[$channelId]);
+
+                    if ($frame instanceof Frame\ChannelClose) {
+                        $this->connection?->writeFrame(Protocol\Method::channelCloseOk($channelId));
+                        $channel->abandon(Exception\ChannelWasClosed::byServer($frame->replyCode, $frame->replyText));
+                    }
                 }
             });
     }
@@ -197,7 +212,7 @@ final class Client
     }
 
     /**
-     * @template T of Protocol\Frame
+     * @template T of Frame
      * @param non-negative-int $channelId
      * @param class-string<T> $frameType
      * @return T
@@ -207,8 +222,16 @@ final class Client
         int $channelId = 0,
         Cancellation $cancellation = new NullCancellation(),
     ): Frame {
-        return $this->connection
+        /** @var DeferredFuture<T> $deferred */
+        $deferred = new DeferredFuture();
+        $this->monitor->trace($deferred);
+
+        $this->connection
             ?->subscribe($channelId, $frameType)
+            ->map($deferred->complete(...));
+
+        return $deferred
+            ->getFuture()
             ->await($cancellation);
     }
 }

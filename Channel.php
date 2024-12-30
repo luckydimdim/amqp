@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Typhoon\Amqp091;
 
 use Amp\Cancellation;
+use Amp\DeferredFuture;
 use Amp\NullCancellation;
 use Typhoon\Amqp091\Internal\Io\AmqpConnection;
+use Typhoon\Amqp091\Internal\Monitor;
 use Typhoon\Amqp091\Internal\Protocol;
 use Typhoon\Amqp091\Internal\Protocol\Frame;
 
@@ -15,13 +17,17 @@ use Typhoon\Amqp091\Internal\Protocol\Frame;
  */
 final class Channel
 {
+    private readonly Monitor $monitor;
+
     /**
      * @param non-negative-int $channelId
      */
     public function __construct(
         private readonly int $channelId,
         private readonly AmqpConnection $connection,
-    ) {}
+    ) {
+        $this->monitor = new Monitor();
+    }
 
     /**
      * @param non-empty-string $exchange
@@ -299,8 +305,14 @@ final class Channel
         $this->await(Frame\ChannelCloseOk::class);
     }
 
+    public function abandon(\Throwable $e): void
+    {
+        $this->connection->unsubscribe($this->channelId);
+        $this->monitor->cancel($e);
+    }
+
     /**
-     * @template T of Protocol\Frame
+     * @template T of Frame
      * @param class-string<T> $frameType
      * @return T
      */
@@ -308,8 +320,16 @@ final class Channel
         string $frameType,
         Cancellation $cancellation = new NullCancellation(),
     ): Frame {
-        return $this->connection
+        /** @var DeferredFuture<T> $deferred */
+        $deferred = new DeferredFuture();
+        $this->monitor->trace($deferred);
+
+        $this->connection
             ->subscribe($this->channelId, $frameType)
+            ->map($deferred->complete(...));
+
+        return $deferred
+            ->getFuture()
             ->await($cancellation);
     }
 }
