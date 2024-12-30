@@ -64,8 +64,8 @@ final class Client
             $this->connectionOpen($cancellation);
 
             $this->connection->subscribe(0, Frame\ConnectionClose::class)->map(function (Frame\ConnectionClose $close): void {
-                $this->connection?->writeFrame(Protocol\Method::connectionCloseOk());
-                $this->connection?->close();
+                $this->connection()->writeFrame(Protocol\Method::connectionCloseOk());
+                $this->connection()->close();
 
                 $error = Exception\ConnectionWasClosed::byServer($close->replyCode, $close->replyText);
 
@@ -92,7 +92,7 @@ final class Client
         $this->channels = [];
 
         $this->connectionClose($replyCode, $replyText, $cancellation);
-        $this->connection?->close();
+        $this->connection()->close();
     }
 
     /**
@@ -103,7 +103,7 @@ final class Client
         $channelId = $this->allocateChannelId();
         $this->openChannel($channelId, $cancellation);
 
-        return new Channel($channelId, $this->connection ?: throw new Exception\ConnectionIsClosed());
+        return new Channel($channelId, $this->connection());
     }
 
     /**
@@ -113,7 +113,7 @@ final class Client
     {
         $auth = Auth\Mechanism::select($start->mechanisms, $this->uri->username, $this->uri->password);
 
-        $this->connection?->writeFrame(
+        $this->connection()->writeFrame(
             Protocol\Method::connectionStartOk($this->properties->toArray(), $auth),
         );
     }
@@ -132,7 +132,7 @@ final class Client
         $maxFrame = min($this->uri->frameMax, $tune->frameMax);
         \assert($maxFrame >= 0, 'max frame must not be negative.');
 
-        $this->connection?->writeFrame(
+        $this->connection()->writeFrame(
             Protocol\Method::connectionTuneOk($maxChannel, $maxFrame, $heartbeat),
         );
 
@@ -144,7 +144,7 @@ final class Client
      */
     private function connectionOpen(Cancellation $cancellation): void
     {
-        $this->connection?->writeFrame(Protocol\Method::connectionOpen($this->uri->vhost));
+        $this->connection()->writeFrame(Protocol\Method::connectionOpen($this->uri->vhost));
 
         $this->await(Frame\ConnectionOpenOk::class, cancellation: $cancellation);
     }
@@ -155,7 +155,7 @@ final class Client
      */
     private function connectionClose(int $replyCode, string $replyText = '', Cancellation $cancellation = new NullCancellation()): void
     {
-        $this->connection?->writeFrame(Protocol\Method::connectionClose($replyCode, $replyText));
+        $this->connection()->writeFrame(Protocol\Method::connectionClose($replyCode, $replyText));
 
         $this->await(Frame\ConnectionCloseOk::class, cancellation: $cancellation);
     }
@@ -166,21 +166,21 @@ final class Client
      */
     private function openChannel(int $channelId, Cancellation $cancellation = new NullCancellation()): void
     {
-        $this->connection?->writeFrame(Protocol\Method::channelOpen($channelId));
+        $this->connection()->writeFrame(Protocol\Method::channelOpen($channelId));
 
         $this->await(Frame\ChannelOpenOkFrame::class, $channelId, $cancellation);
 
-        $this->connection
-            ?->subscribeAny($channelId, Frame\ChannelCloseOk::class, Frame\ChannelClose::class)
+        $this->connection()
+            ->subscribeAny($channelId, Frame\ChannelCloseOk::class, Frame\ChannelClose::class)
             ->map(function (Frame\ChannelCloseOk|Frame\ChannelClose $frame) use ($channelId): void {
                 $channel = $this->channels[$channelId] ?? null;
 
                 if ($channel !== null) {
-                    $this->connection?->unsubscribe($channelId);
+                    $this->connection()->unsubscribe($channelId);
                     unset($this->channels[$channelId]);
 
                     if ($frame instanceof Frame\ChannelClose) {
-                        $this->connection?->writeFrame(Protocol\Method::channelCloseOk($channelId));
+                        $this->connection()->writeFrame(Protocol\Method::channelCloseOk($channelId));
                         $channel->abandon(Exception\ChannelWasClosed::byServer($frame->replyCode, $frame->replyText));
                     }
                 }
@@ -212,6 +212,14 @@ final class Client
     }
 
     /**
+     * @throws Exception\ConnectionIsClosed
+     */
+    private function connection(): AmqpConnection
+    {
+        return $this->connection ?: throw new Exception\ConnectionIsClosed();
+    }
+
+    /**
      * @template T of Frame
      * @param non-negative-int $channelId
      * @param class-string<T> $frameType
@@ -226,8 +234,9 @@ final class Client
         $deferred = new DeferredFuture();
         $this->monitor->trace($deferred);
 
-        $this->connection
-            ?->subscribe($channelId, $frameType)
+        $this
+            ->connection()
+            ->subscribe($channelId, $frameType)
             ->map($deferred->complete(...));
 
         return $deferred
