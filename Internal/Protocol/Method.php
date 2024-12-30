@@ -410,6 +410,19 @@ final class Method implements Frame
         );
     }
 
+    /**
+     * @param non-negative-int $channelId
+     */
+    public static function confirmSelect(int $channelId, bool $noWait = false): self
+    {
+        return new self(
+            ClassType::CONFIRM,
+            ClassMethod::CONFIRM_SELECT,
+            new Frame\ConfirmSelect($noWait),
+            $channelId,
+        );
+    }
+
     public static function read(Io\ReadBytes $reader): self
     {
         throw new \BadMethodCallException('Not implemented yet.');

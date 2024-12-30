@@ -7,6 +7,7 @@ namespace Typhoon\Amqp091;
 use Amp\Cancellation;
 use Amp\DeferredFuture;
 use Amp\NullCancellation;
+use Typhoon\Amqp091\Internal\ChannelMode;
 use Typhoon\Amqp091\Internal\Io\AmqpConnection;
 use Typhoon\Amqp091\Internal\Monitor;
 use Typhoon\Amqp091\Internal\Protocol;
@@ -18,6 +19,8 @@ use Typhoon\Amqp091\Internal\Protocol\Frame;
 final class Channel
 {
     private readonly Monitor $monitor;
+
+    private ChannelMode $mode = ChannelMode::regular;
 
     /**
      * @param non-negative-int $channelId
@@ -269,9 +272,15 @@ final class Channel
      */
     public function txSelect(): void
     {
+        if ($this->mode->confirming()) {
+            throw Exception\ChannelModeIsImpossible::inConfirmation($this->channelId);
+        }
+
         $this->connection->writeFrame(Protocol\Method::txSelect($this->channelId));
 
         $this->await(Frame\TxSelectOk::class);
+
+        $this->mode = ChannelMode::transactional;
     }
 
     /**
@@ -279,6 +288,10 @@ final class Channel
      */
     public function txCommit(): void
     {
+        if (!$this->mode->transactional()) {
+            throw Exception\ChannelIsNotTransactional::for($this->channelId);
+        }
+
         $this->connection->writeFrame(Protocol\Method::txCommit($this->channelId));
 
         $this->await(Frame\TxCommitOk::class);
@@ -289,9 +302,31 @@ final class Channel
      */
     public function txRollback(): void
     {
+        if (!$this->mode->transactional()) {
+            throw Exception\ChannelIsNotTransactional::for($this->channelId);
+        }
+
         $this->connection->writeFrame(Protocol\Method::txRollback($this->channelId));
 
         $this->await(Frame\TxRollbackOk::class);
+    }
+
+    /**
+     * @throws \Throwable
+     */
+    public function confirmSelect(bool $noWait = false): void
+    {
+        if ($this->mode->transactional()) {
+            throw Exception\ChannelModeIsImpossible::inTransactional($this->channelId);
+        }
+
+        $this->connection->writeFrame(Protocol\Method::confirmSelect($this->channelId, $noWait));
+
+        if (!$noWait) {
+            $this->await(Frame\ConfirmSelectOk::class);
+        }
+
+        $this->mode = ChannelMode::confirm;
     }
 
     /**

@@ -49,6 +49,9 @@ enum Protocol
             ClassMethod::TX_COMMIT_OK => Frame\TxCommitOk::class,
             ClassMethod::TX_ROLLBACK_OK => Frame\TxRollbackOk::class,
         ],
+        ClassType::CONFIRM => [
+            ClassMethod::CONFIRM_SELECT_OK => Frame\ConfirmSelectOk::class,
+        ],
     ];
 
     /**
