@@ -123,7 +123,7 @@ final class Client
      */
     private function connectionTune(Frame\ConnectionTune $tune): void
     {
-        $heartbeat = (int) min($this->uri->heartbeat, $tune->heartbeat / 1000);
+        $heartbeat = min($this->uri->heartbeat, $tune->heartbeat);
         \assert($heartbeat >= 0, 'heartbeat must not be negative.');
 
         $maxChannel = min($this->uri->channelMax, $tune->channelMax);
@@ -137,6 +137,10 @@ final class Client
         );
 
         $this->properties->tune($maxChannel, $maxFrame);
+
+        if ($heartbeat > 0) {
+            $this->connection()->heartbeat($heartbeat);
+        }
     }
 
     /**

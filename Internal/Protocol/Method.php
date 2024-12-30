@@ -14,8 +14,6 @@ use Typhoon\Endian\endian;
  */
 final class Method implements Frame
 {
-    private const FRAME_END = 206;
-
     /**
      * @param array<string, mixed> $clientProperties
      */
@@ -452,6 +450,6 @@ final class Method implements Frame
 
                 $this->frame->write($writer);
             })
-            ->writeUint8(self::FRAME_END);
+            ->writeUint8(Protocol::FRAME_END);
     }
 }

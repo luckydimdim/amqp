@@ -18,7 +18,7 @@ final class Uri
     private const DEFAULT_PASSWORD = 'guest';
     private const DEFAULT_VHOST = '/';
     private const DEFAULT_CONNECTION_TIMEOUT = 1000;
-    private const DEFAULT_HEARTBEAT_INTERVAL = 6;
+    private const DEFAULT_HEARTBEAT_INTERVAL = 60;
     private const MAX_CHANNEL = 0xFFFF;
     private const MAX_FRAME = 0xFFFF;
 

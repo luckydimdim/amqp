@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Typhoon\Amqp091\Internal\Io;
 
+use Amp;
 use Amp\Future;
 use Amp\Socket\Socket;
 use Revolt\EventLoop;
@@ -25,6 +26,10 @@ final class AmqpConnection implements Writer
     private readonly Hooks $hooks;
 
     private readonly Buffer $buffer;
+
+    private ?string $heartbeatId = null;
+
+    private float $lastWrite = 0;
 
     public function __construct(Socket $socket)
     {
@@ -98,12 +103,31 @@ final class AmqpConnection implements Writer
     public function write(string $bytes): void
     {
         $this->socket->write($bytes);
+        $this->lastWrite = Amp\now();
+    }
+
+    /**
+     * @param non-negative-int $interval
+     */
+    public function heartbeat(int $interval): void
+    {
+        $interval = (int) ($interval / 2);
+
+        $this->heartbeatId = EventLoop::repeat((int) ($interval / 3), function () use ($interval): void {
+            if (Amp\now() >= ($this->lastWrite + $interval)) {
+                $this->writeFrame(Protocol\Heartbeat::frame);
+            }
+        });
     }
 
     public function close(): void
     {
         if (!$this->socket->isClosed()) {
             $this->socket->close();
+        }
+
+        if ($this->heartbeatId !== null) {
+            EventLoop::cancel($this->heartbeatId);
         }
     }
 }

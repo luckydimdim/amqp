@@ -49,6 +49,7 @@ final class Reader
 
         yield match ($type) {
             FrameType::method => Protocol::amqp091->parseMethod($this->buffer, $channelId),
+            FrameType::heartbeat => new Request(0, Heartbeat::frame),
             default => throw new NotImplemented(),
         };
 
