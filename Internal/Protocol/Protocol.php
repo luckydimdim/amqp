@@ -44,6 +44,11 @@ enum Protocol
             ClassMethod::QUEUE_PURGE_OK => Frame\QueuePurgeOk::class,
             ClassMethod::QUEUE_DELETE_OK => Frame\QueueDeleteOk::class,
         ],
+        ClassType::TX => [
+            ClassMethod::TX_SELECT_OK => Frame\TxSelectOk::class,
+            ClassMethod::TX_COMMIT_OK => Frame\TxCommitOk::class,
+            ClassMethod::TX_ROLLBACK_OK => Frame\TxRollbackOk::class,
+        ],
     ];
 
     /**

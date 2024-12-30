@@ -371,6 +371,45 @@ final class Method implements Frame
         );
     }
 
+    /**
+     * @param non-negative-int $channelId
+     */
+    public static function txSelect(int $channelId): self
+    {
+        return new self(
+            ClassType::TX,
+            ClassMethod::TX_SELECT,
+            Frame\TxSelect::frame,
+            $channelId,
+        );
+    }
+
+    /**
+     * @param non-negative-int $channelId
+     */
+    public static function txCommit(int $channelId): self
+    {
+        return new self(
+            ClassType::TX,
+            ClassMethod::TX_COMMIT,
+            Frame\TxCommit::frame,
+            $channelId,
+        );
+    }
+
+    /**
+     * @param non-negative-int $channelId
+     */
+    public static function txRollback(int $channelId): self
+    {
+        return new self(
+            ClassType::TX,
+            ClassMethod::TX_ROLLBACK,
+            Frame\TxRollback::frame,
+            $channelId,
+        );
+    }
+
     public static function read(Io\ReadBytes $reader): self
     {
         throw new \BadMethodCallException('Not implemented yet.');

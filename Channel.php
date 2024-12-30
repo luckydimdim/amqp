@@ -259,6 +259,36 @@ final class Channel
     }
 
     /**
+     * @throws \Throwable
+     */
+    public function txSelect(): void
+    {
+        $this->connection->writeFrame(Protocol\Method::txSelect($this->channelId));
+
+        $this->await(Frame\TxSelectOk::class);
+    }
+
+    /**
+     * @throws \Throwable
+     */
+    public function txCommit(): void
+    {
+        $this->connection->writeFrame(Protocol\Method::txCommit($this->channelId));
+
+        $this->await(Frame\TxCommitOk::class);
+    }
+
+    /**
+     * @throws \Throwable
+     */
+    public function txRollback(): void
+    {
+        $this->connection->writeFrame(Protocol\Method::txRollback($this->channelId));
+
+        $this->await(Frame\TxRollbackOk::class);
+    }
+
+    /**
      * @param non-negative-int $replyCode
      * @throws \Throwable
      */
