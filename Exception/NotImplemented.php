@@ -9,4 +9,4 @@ use Typhoon\Amqp091\Amqp091Exception;
 /**
  * @api
  */
-final class NotImplementedYet extends \LogicException implements Amqp091Exception {}
+final class NotImplemented extends \LogicException implements Amqp091Exception {}

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Typhoon\Amqp091\Internal\Protocol;
 
 use Typhoon\Amqp091\Internal\Io;
-use Typhoon\Amqp091\Internal\Protocol\Auth\Authentication;
+use Typhoon\Amqp091\Internal\Protocol\Auth\Mechanism;
 use Typhoon\Endian\endian;
 
 /**
@@ -21,7 +21,7 @@ final class Method implements Frame
      */
     public static function connectionStartOk(
         array $clientProperties,
-        Authentication $auth,
+        Mechanism $auth,
         string $locale = 'en_US',
     ): self {
         return new self(

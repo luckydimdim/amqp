@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Typhoon\Amqp091\Internal\Protocol\Frame;
 
 use Typhoon\Amqp091\Internal\Io;
-use Typhoon\Amqp091\Internal\Protocol\Auth\Authentication;
+use Typhoon\Amqp091\Internal\Protocol\Auth\Mechanism;
 use Typhoon\Amqp091\Internal\Protocol\Frame;
 use Typhoon\Endian\endian;
 
@@ -20,7 +20,7 @@ final class ConnectionStartOk implements Frame
      */
     public function __construct(
         public readonly array $clientProperties,
-        public readonly Authentication $auth,
+        public readonly Mechanism $auth,
         public readonly string $locale = 'en_US',
     ) {}
 
@@ -33,7 +33,7 @@ final class ConnectionStartOk implements Frame
     {
         return $writer
             ->writeTable($this->clientProperties)
-            ->writeString($this->auth->mechanism())
+            ->writeString($this->auth->name())
             ->reserve(endian::network->packUint32(...), $this->auth->write(...))
             ->writeString($this->locale);
     }

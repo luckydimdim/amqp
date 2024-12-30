@@ -10,16 +10,16 @@ use Typhoon\Amqp091\Internal\Io;
  * @internal
  * @psalm-internal Typhoon\Amqp091
  */
-final class AMQPlain implements Authentication
+final class AMQPlain extends Mechanism
 {
     public function __construct(
         private readonly string $username,
         private readonly string $password,
     ) {}
 
-    public function mechanism(): string
+    public function name(): string
     {
-        return 'AMQPLAIN';
+        return self::AMQPLAIN;
     }
 
     public function write(Io\WriteBytes $writer): void

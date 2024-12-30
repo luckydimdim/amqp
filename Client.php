@@ -99,10 +99,12 @@ final class Client
     /**
      * @throws \Throwable
      */
-    private function connectionStart(Frame\ConnectionStart $_): void
+    private function connectionStart(Frame\ConnectionStart $start): void
     {
+        $auth = Auth\Mechanism::select($start->mechanisms, $this->uri->username, $this->uri->password);
+
         $this->connection?->writeFrame(
-            Protocol\Method::connectionStartOk($this->properties->toArray(), new Auth\AMQPlain($this->uri->username, $this->uri->password)),
+            Protocol\Method::connectionStartOk($this->properties->toArray(), $auth),
         );
     }
 
