@@ -179,6 +179,19 @@ final class Channel
     }
 
     /**
+     * @throws \Throwable
+     */
+    public function recover(bool $requeue = false): void
+    {
+        $this->connection->writeFrame(Protocol\Method::basicRecover(
+            channelId: $this->channelId,
+            requeue: $requeue,
+        ));
+
+        $this->await(Frame\BasicRecoverOk::class);
+    }
+
+    /**
      * @param non-empty-string $exchange
      * @param non-empty-string $exchangeType
      * @param array<string, mixed> $arguments

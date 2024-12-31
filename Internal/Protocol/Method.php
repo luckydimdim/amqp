@@ -525,6 +525,23 @@ final class Method implements Frame
         );
     }
 
+    /**
+     * @param non-negative-int $channelId
+     */
+    public static function basicRecover(
+        int $channelId,
+        bool $requeue = false,
+    ): self {
+        return new self(
+            ClassType::BASIC,
+            ClassMethod::BASIC_RECOVER,
+            new Frame\BasicRecover(
+                requeue: $requeue,
+            ),
+            $channelId,
+        );
+    }
+
     public static function read(Io\ReadBytes $reader): self
     {
         throw new \BadMethodCallException('Not implemented yet.');

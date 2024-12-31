@@ -56,6 +56,7 @@ enum Protocol
         ClassType::BASIC => [
             ClassMethod::BASIC_GET_EMPTY => Frame\BasicGetEmpty::class,
             ClassMethod::BASIC_GET_OK => Frame\BasicGetOk::class,
+            ClassMethod::BASIC_RECOVER_OK => Frame\BasicRecoverOk::class,
         ],
     ];
 
