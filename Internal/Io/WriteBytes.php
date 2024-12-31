@@ -12,8 +12,6 @@ use Typhoon\ByteWriter\Writer;
  */
 interface WriteBytes
 {
-    public function writeInt8(int $v): self;
-
     /**
      * @param non-negative-int $v
      */
@@ -33,14 +31,10 @@ interface WriteBytes
      */
     public function writeUint32(int $v): self;
 
-    public function writeInt64(int $v): self;
-
     /**
      * @param non-negative-int $v
      */
     public function writeUint64(int $v): self;
-
-    public function writeFloat(float $v): self;
 
     public function writeDouble(float $v): self;
 

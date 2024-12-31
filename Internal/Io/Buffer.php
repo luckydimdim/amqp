@@ -60,11 +60,6 @@ final class Buffer implements
         $this->allocSize = $this->len ?: self::DEFAULT_BUFFER_SIZE;
     }
 
-    public function writeInt8(int $v): self
-    {
-        return $this->append($this->endian->packInt8($v));
-    }
-
     public function writeUint8(int $v): self
     {
         return $this->append($this->endian->packUint8($v));
@@ -90,19 +85,9 @@ final class Buffer implements
         return $this->append($this->endian->packUint32($v));
     }
 
-    public function writeInt64(int $v): self
-    {
-        return $this->append($this->endian->packInt64($v));
-    }
-
     public function writeUint64(int $v): self
     {
         return $this->append($this->endian->packUint64($v));
-    }
-
-    public function writeFloat(float $v): self
-    {
-        return $this->append($this->endian->packFloat($v));
     }
 
     public function writeDouble(float $v): self
