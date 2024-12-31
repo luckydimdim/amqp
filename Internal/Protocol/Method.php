@@ -542,6 +542,29 @@ final class Method implements Frame
         );
     }
 
+    /**
+     * @param non-negative-int $channelId
+     * @param non-negative-int $prefetchSize
+     * @param non-negative-int $prefetchCount
+     */
+    public static function basicQos(
+        int $channelId,
+        int $prefetchSize,
+        int $prefetchCount,
+        bool $global,
+    ): self {
+        return new self(
+            ClassType::BASIC,
+            ClassMethod::BASIC_QOS,
+            new Frame\BasicQos(
+                prefetchSize: $prefetchSize,
+                prefetchCount: $prefetchCount,
+                global: $global,
+            ),
+            $channelId,
+        );
+    }
+
     public static function read(Io\ReadBytes $reader): self
     {
         throw new \BadMethodCallException('Not implemented yet.');

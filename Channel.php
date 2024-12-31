@@ -192,6 +192,23 @@ final class Channel
     }
 
     /**
+     * @param non-negative-int $prefetchSize
+     * @param non-negative-int $prefetchCount
+     * @throws \Throwable
+     */
+    public function qos(int $prefetchSize = 0, int $prefetchCount = 0, bool $global = false): void
+    {
+        $this->connection->writeFrame(Protocol\Method::basicQos(
+            channelId: $this->channelId,
+            prefetchSize: $prefetchSize,
+            prefetchCount: $prefetchCount,
+            global: $global,
+        ));
+
+        $this->await(Frame\BasicQosOk::class);
+    }
+
+    /**
      * @param non-empty-string $exchange
      * @param non-empty-string $exchangeType
      * @param array<string, mixed> $arguments
