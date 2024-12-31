@@ -26,6 +26,8 @@ final class Delivery
      * @param Nack $nack
      * @param Reject $reject
      * @param array<string, mixed> $headers
+     * @param non-negative-int $deliveryTag
+     * @param ?int<0, 9> $priority
      */
     public function __construct(
         callable $ack,
@@ -34,6 +36,7 @@ final class Delivery
         public readonly string $body = '',
         public readonly array $headers = [],
         public readonly int $deliveryTag = 0,
+        public readonly bool $redelivered = false,
         public readonly ?string $contentType = null,
         public readonly ?string $contentEncoding = null,
         public readonly DeliveryMode $deliveryMode = DeliveryMode::Whatever,

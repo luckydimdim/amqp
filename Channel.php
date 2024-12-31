@@ -114,12 +114,13 @@ final class Channel
             }
 
             $delivery = new Delivery(
-                ack: static function (): void {},
+                ack: $this->ack(...),
                 nack: static function (): void {},
                 reject: static function (): void {},
                 body: $content,
                 headers: $header->properties->headers,
                 deliveryTag: $frame->deliveryTag,
+                redelivered: $frame->redelivered,
                 contentType: $header->properties->contentType,
                 contentEncoding: $header->properties->contentEncoding,
                 deliveryMode: $header->properties->deliveryMode,
@@ -138,6 +139,18 @@ final class Channel
         $permit = true;
 
         return $delivery;
+    }
+
+    /**
+     * @throws \Throwable
+     */
+    public function ack(Delivery $delivery, bool $multiple = false): void
+    {
+        $this->connection->writeFrame(Protocol\Method::basicAck(
+            channelId: $this->channelId,
+            deliveryTag: $delivery->deliveryTag,
+            multiple: $multiple,
+        ));
     }
 
     /**
