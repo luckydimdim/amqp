@@ -60,6 +60,7 @@ enum Protocol
             ClassMethod::BASIC_QOS_OK => Frame\BasicQosOk::class,
             ClassMethod::BASIC_CONSUME_OK => Frame\BasicConsumeOk::class,
             ClassMethod::BASIC_DELIVER => Frame\BasicDeliver::class,
+            ClassMethod::BASIC_CANCEL_OK => Frame\BasicCancelOk::class,
         ],
     ];
 

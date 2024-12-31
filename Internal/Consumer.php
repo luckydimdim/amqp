@@ -66,6 +66,14 @@ final class Consumer
         }
     }
 
+    /**
+     * @param non-empty-string $consumerTag
+     */
+    public function unregister(string $consumerTag): void
+    {
+        unset($this->listeners[$consumerTag]);
+    }
+
     private function onBasicDeliver(Frame\BasicDeliver $delivery): void
     {
         if ($this->step === self::WAIT) {

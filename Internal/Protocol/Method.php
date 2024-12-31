@@ -595,6 +595,26 @@ final class Method implements Frame
         );
     }
 
+    /**
+     * @param non-negative-int $channelId
+     * @param non-empty-string $consumerTag
+     */
+    public static function basicCancel(
+        int $channelId,
+        string $consumerTag,
+        bool $noWait = false,
+    ): self {
+        return new self(
+            ClassType::BASIC,
+            ClassMethod::BASIC_CANCEL,
+            new Frame\BasicCancel(
+                consumerTag: $consumerTag,
+                noWait: $noWait,
+            ),
+            $channelId,
+        );
+    }
+
     public static function read(Io\ReadBytes $reader): self
     {
         throw new \BadMethodCallException('Not implemented yet.');

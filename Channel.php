@@ -258,6 +258,25 @@ final class Channel
     }
 
     /**
+     * @param non-empty-string $consumerTag
+     * @throws \Throwable
+     */
+    public function cancel(string $consumerTag, bool $noWait = false): void
+    {
+        $this->connection->writeFrame(Protocol\Method::basicCancel(
+            channelId: $this->channelId,
+            consumerTag: $consumerTag,
+            noWait: $noWait,
+        ));
+
+        if (!$noWait) {
+            $this->await(Frame\BasicCancelOk::class);
+        }
+
+        $this->consumer->unregister($consumerTag);
+    }
+
+    /**
      * @param non-empty-string $exchange
      * @param non-empty-string $exchangeType
      * @param array<string, mixed> $arguments
