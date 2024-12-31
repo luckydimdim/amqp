@@ -60,7 +60,7 @@ final class Delivery
         ($this->ack)($this, $multiple);
     }
 
-    public function nack(bool $multiple = false, bool $requeue = false): void
+    public function nack(bool $multiple = false, bool $requeue = true): void
     {
         ($this->nack)($this, $multiple, $requeue);
     }

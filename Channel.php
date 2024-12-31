@@ -115,7 +115,7 @@ final class Channel
 
             $delivery = new Delivery(
                 ack: $this->ack(...),
-                nack: static function (): void {},
+                nack: $this->nack(...),
                 reject: static function (): void {},
                 body: $content,
                 headers: $header->properties->headers,
@@ -150,6 +150,19 @@ final class Channel
             channelId: $this->channelId,
             deliveryTag: $delivery->deliveryTag,
             multiple: $multiple,
+        ));
+    }
+
+    /**
+     * @throws \Throwable
+     */
+    public function nack(Delivery $delivery, bool $multiple = false, bool $requeue = true): void
+    {
+        $this->connection->writeFrame(Protocol\Method::basicNack(
+            channelId: $this->channelId,
+            deliveryTag: $delivery->deliveryTag,
+            multiple: $multiple,
+            requeue: $requeue,
         ));
     }
 

@@ -483,6 +483,28 @@ final class Method implements Frame
         );
     }
 
+    /**
+     * @param non-negative-int $channelId
+     * @param non-negative-int $deliveryTag
+     */
+    public static function basicNack(
+        int $channelId,
+        int $deliveryTag,
+        bool $multiple = false,
+        bool $requeue = true,
+    ): self {
+        return new self(
+            ClassType::BASIC,
+            ClassMethod::BASIC_NACK,
+            new Frame\BasicNack(
+                deliveryTag: $deliveryTag,
+                multiple: $multiple,
+                requeue: $requeue,
+            ),
+            $channelId,
+        );
+    }
+
     public static function read(Io\ReadBytes $reader): self
     {
         throw new \BadMethodCallException('Not implemented yet.');
