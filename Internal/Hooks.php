@@ -72,7 +72,7 @@ final class Hooks implements
      */
     public function unsubscribe(int $channelId): void
     {
-        unset($this->defers[$channelId], $this->queue[$channelId]);
+        unset($this->defers[$channelId], $this->queue[$channelId], $this->pending[$channelId]);
     }
 
     public function emit(Protocol\Request ...$requests): void

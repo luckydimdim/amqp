@@ -28,12 +28,15 @@ final class AmqpConnection implements Writer
 
     private float $lastWrite = 0;
 
+    private bool $isClosed = false;
+
     public function __construct(Socket $socket, Hooks $hooks)
     {
         $this->socket = $socket;
         $this->buffer = Buffer::alloc();
+        $isClosed = &$this->isClosed;
 
-        EventLoop::queue(static function () use ($socket, $hooks): void {
+        EventLoop::queue(static function () use ($socket, $hooks, &$isClosed): void {
             $reader = new Protocol\Reader(
                 new ReaderWriter(
                     new BufferedReaderWriter(
@@ -47,7 +50,9 @@ final class AmqpConnection implements Writer
                     $hooks->emit(...$frames);
                 }
             } catch (\Throwable $e) {
-                $hooks->error($e);
+                if (!$isClosed) {
+                    $hooks->error($e);
+                }
             }
 
             $hooks->complete();
@@ -100,5 +105,7 @@ final class AmqpConnection implements Writer
         if ($this->heartbeatId !== null) {
             EventLoop::cancel($this->heartbeatId);
         }
+
+        $this->isClosed = true;
     }
 }

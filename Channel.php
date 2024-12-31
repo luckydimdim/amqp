@@ -31,6 +31,8 @@ final class Channel
     /** @var non-negative-int */
     private int $deliveryTag = 0;
 
+    private bool $isClosed = false;
+
     /**
      * @param non-negative-int $channelId
      */
@@ -579,9 +581,13 @@ final class Channel
      */
     public function close(int $replyCode = 200, string $replyText = ''): void
     {
-        $this->connection->writeFrame(Protocol\Method::channelClose($this->channelId, $replyCode, $replyText));
+        if (!$this->isClosed) {
+            $this->connection->writeFrame(Protocol\Method::channelClose($this->channelId, $replyCode, $replyText));
 
-        $this->await(Frame\ChannelCloseOk::class);
+            $this->await(Frame\ChannelCloseOk::class);
+        }
+
+        $this->isClosed = true;
     }
 
     /**
