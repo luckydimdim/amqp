@@ -565,6 +565,36 @@ final class Method implements Frame
         );
     }
 
+    /**
+     * @param non-negative-int $channelId
+     * @param array<string, mixed> $arguments
+     */
+    public static function basicConsume(
+        int $channelId,
+        string $queue = '',
+        string $consumerTag = '',
+        bool $noLocal = false,
+        bool $noAck = false,
+        bool $exclusive = false,
+        bool $noWait = false,
+        array $arguments = [],
+    ): self {
+        return new self(
+            ClassType::BASIC,
+            ClassMethod::BASIC_CONSUME,
+            new Frame\BasicConsume(
+                queue: $queue,
+                consumerTag: $consumerTag,
+                noLocal: $noLocal,
+                noAck: $noAck,
+                exclusive: $exclusive,
+                noWait: $noWait,
+                arguments: $arguments,
+            ),
+            $channelId,
+        );
+    }
+
     public static function read(Io\ReadBytes $reader): self
     {
         throw new \BadMethodCallException('Not implemented yet.');

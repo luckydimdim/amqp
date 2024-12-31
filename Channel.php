@@ -8,6 +8,7 @@ use Amp\Cancellation;
 use Amp\DeferredFuture;
 use Amp\NullCancellation;
 use Typhoon\Amqp091\Internal\ChannelMode;
+use Typhoon\Amqp091\Internal\Consumer;
 use Typhoon\Amqp091\Internal\Hooks;
 use Typhoon\Amqp091\Internal\Io\AmqpConnection;
 use Typhoon\Amqp091\Internal\MessageProperties;
@@ -22,6 +23,8 @@ use Typhoon\Amqp091\Internal\Protocol\Frame;
 final class Channel
 {
     private readonly Monitor $monitor;
+
+    private readonly Consumer $consumer;
 
     private ChannelMode $mode = ChannelMode::regular;
 
@@ -38,6 +41,13 @@ final class Channel
         private readonly Hooks $hooks,
     ) {
         $this->monitor = new Monitor();
+        $this->consumer = new Consumer(
+            $this,
+            $this->hooks,
+            $this->channelId,
+        );
+
+        $this->consumer->run();
     }
 
     /**
@@ -206,6 +216,45 @@ final class Channel
         ));
 
         $this->await(Frame\BasicQosOk::class);
+    }
+
+    /**
+     * @param callable(Delivery): void $callback
+     * @param array<string, mixed> $arguments
+     * @throws \Throwable
+     */
+    public function consume(
+        callable $callback,
+        string $queue = '',
+        string $consumerTag = '',
+        bool $noLocal = false,
+        bool $noAck = false,
+        bool $exclusive = false,
+        bool $noWait = false,
+        array $arguments = [],
+    ): string {
+        $this->connection->writeFrame(Protocol\Method::basicConsume(
+            channelId: $this->channelId,
+            queue: $queue,
+            consumerTag: $consumerTag,
+            noLocal: $noLocal,
+            noAck: $noAck,
+            exclusive: $exclusive,
+            noWait: $noWait,
+            arguments: $arguments,
+        ));
+
+        if (!$noWait) {
+            $frame = $this->await(Frame\BasicConsumeOk::class);
+
+            if ($consumerTag === '') {
+                $consumerTag = $frame->consumerTag;
+            }
+        }
+
+        $this->consumer->register($consumerTag, $callback);
+
+        return $consumerTag;
     }
 
     /**
