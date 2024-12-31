@@ -116,7 +116,7 @@ final class Channel
             $delivery = new Delivery(
                 ack: $this->ack(...),
                 nack: $this->nack(...),
-                reject: static function (): void {},
+                reject: $this->reject(...),
                 body: $content,
                 headers: $header->properties->headers,
                 deliveryTag: $frame->deliveryTag,
@@ -162,6 +162,18 @@ final class Channel
             channelId: $this->channelId,
             deliveryTag: $delivery->deliveryTag,
             multiple: $multiple,
+            requeue: $requeue,
+        ));
+    }
+
+    /**
+     * @throws \Throwable
+     */
+    public function reject(Delivery $delivery, bool $requeue = true): void
+    {
+        $this->connection->writeFrame(Protocol\Method::basicReject(
+            channelId: $this->channelId,
+            deliveryTag: $delivery->deliveryTag,
             requeue: $requeue,
         ));
     }

@@ -65,7 +65,7 @@ final class Delivery
         ($this->nack)($this, $multiple, $requeue);
     }
 
-    public function reject(bool $requeue = false): void
+    public function reject(bool $requeue = true): void
     {
         ($this->reject)($this, $requeue);
     }
