@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Typhoon\Amqp091\Internal\Io;
 
 use Amp;
-use Amp\Future;
 use Amp\Socket\Socket;
 use Revolt\EventLoop;
 use Typhoon\AmpBridge\AmpReaderWriter;
@@ -23,21 +22,16 @@ final class AmqpConnection implements Writer
 {
     private readonly Socket $socket;
 
-    private readonly Hooks $hooks;
-
     private readonly Buffer $buffer;
 
     private ?string $heartbeatId = null;
 
     private float $lastWrite = 0;
 
-    public function __construct(Socket $socket)
+    public function __construct(Socket $socket, Hooks $hooks)
     {
         $this->socket = $socket;
         $this->buffer = Buffer::alloc();
-
-        $hooks = new Hooks();
-        $this->hooks = $hooks;
 
         EventLoop::queue(static function () use ($socket, $hooks): void {
             $reader = new Protocol\Reader(
@@ -58,36 +52,6 @@ final class AmqpConnection implements Writer
 
             $hooks->complete();
         });
-    }
-
-    /**
-     * @template T of Protocol\Frame
-     * @param non-negative-int $channelId
-     * @param class-string<T> $frameType
-     * @return Future<T>
-     */
-    public function subscribe(int $channelId, string $frameType): Future
-    {
-        return $this->hooks->subscribe($channelId, $frameType);
-    }
-
-    /**
-     * @template T of Protocol\Frame
-     * @param non-negative-int $channelId
-     * @param class-string<T> ...$frameTypes
-     * @return Future<T>
-     */
-    public function subscribeAny(int $channelId, string ...$frameTypes): Future
-    {
-        return $this->hooks->subscribeAny($channelId, ...$frameTypes);
-    }
-
-    /**
-     * @param non-negative-int $channelId
-     */
-    public function unsubscribe(int $channelId): void
-    {
-        $this->hooks->unsubscribe($channelId);
     }
 
     /**

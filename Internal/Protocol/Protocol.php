@@ -53,6 +53,10 @@ enum Protocol
         ClassType::CONFIRM => [
             ClassMethod::CONFIRM_SELECT_OK => Frame\ConfirmSelectOk::class,
         ],
+        ClassType::BASIC => [
+            ClassMethod::BASIC_GET_EMPTY => Frame\BasicGetEmpty::class,
+            ClassMethod::BASIC_GET_OK => Frame\BasicGetOk::class,
+        ],
     ];
 
     /**

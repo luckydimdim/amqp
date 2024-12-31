@@ -9,6 +9,7 @@ use Amp\CancelledException;
 use Amp\DeferredFuture;
 use Amp\NullCancellation;
 use Amp\Socket;
+use Typhoon\Amqp091\Internal\Hooks;
 use Typhoon\Amqp091\Internal\Io\AmqpConnection;
 use Typhoon\Amqp091\Internal\Monitor;
 use Typhoon\Amqp091\Internal\Properties;
@@ -33,10 +34,13 @@ final class Client
 
     private readonly Monitor $monitor;
 
+    private readonly Hooks $hooks;
+
     public function __construct(private readonly Uri $uri)
     {
         $this->properties = Properties::createDefault();
         $this->monitor = new Monitor();
+        $this->hooks = new Hooks();
     }
 
     /**
@@ -49,6 +53,7 @@ final class Client
         if ($this->connection === null) {
             $this->connection = new AmqpConnection(
                 Socket\connect($this->uri->connectionDsn()),
+                $this->hooks,
             );
 
             $this->connection->writeFrame(Frame\ProtocolHeader::frame);
@@ -63,7 +68,7 @@ final class Client
 
             $this->connectionOpen($cancellation);
 
-            $this->connection->subscribe(0, Frame\ConnectionClose::class)->map(function (Frame\ConnectionClose $close): void {
+            $this->hooks->subscribe(0, Frame\ConnectionClose::class)->map(function (Frame\ConnectionClose $close): void {
                 $this->connection()->writeFrame(Protocol\Method::connectionCloseOk());
                 $this->connection()->close();
 
@@ -103,7 +108,12 @@ final class Client
         $channelId = $this->allocateChannelId();
         $this->openChannel($channelId, $cancellation);
 
-        return $this->channels[$channelId] = new Channel($channelId, $this->connection(), $this->properties);
+        return $this->channels[$channelId] = new Channel(
+            $channelId,
+            $this->connection(),
+            $this->properties,
+            $this->hooks,
+        );
     }
 
     /**
@@ -174,13 +184,13 @@ final class Client
 
         $this->await(Frame\ChannelOpenOkFrame::class, $channelId, $cancellation);
 
-        $this->connection()
-            ->subscribeAny($channelId, Frame\ChannelCloseOk::class, Frame\ChannelClose::class)
+        $this->hooks
+            ->anyOf($channelId, Frame\ChannelCloseOk::class, Frame\ChannelClose::class)
             ->map(function (Frame\ChannelCloseOk|Frame\ChannelClose $frame) use ($channelId): void {
                 $channel = $this->channels[$channelId] ?? null;
 
                 if ($channel !== null) {
-                    $this->connection()->unsubscribe($channelId);
+                    $this->hooks->unsubscribe($channelId);
                     unset($this->channels[$channelId]);
 
                     if ($frame instanceof Frame\ChannelClose) {
@@ -239,7 +249,7 @@ final class Client
         $this->monitor->trace($deferred);
 
         $this
-            ->connection()
+            ->hooks
             ->subscribe($channelId, $frameType)
             ->map($deferred->complete(...));
 

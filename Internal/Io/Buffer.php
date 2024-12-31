@@ -246,7 +246,7 @@ final class Buffer implements
 
     public function readUint64(): int
     {
-        return $this->endian->unpackUint32($this->consume(8));
+        return $this->endian->unpackUint64($this->consume(8));
     }
 
     public function readFloat(): float

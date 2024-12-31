@@ -23,13 +23,16 @@ final class Hooks implements
     /** @var array<non-negative-int, array<int, DeferredFuture<Protocol\Frame>>> */
     private array $queue = [];
 
+    /** @var array<non-negative-int, array<class-string<Protocol\Frame>, list<Protocol\Request>>> */
+    private array $pending = [];
+
     /**
      * @template T of Protocol\Frame
      * @param non-negative-int $channelId
      * @param class-string<T> ...$frameTypes
      * @return Future<T>
      */
-    public function subscribeAny(int $channelId, string ...$frameTypes): Future
+    public function anyOf(int $channelId, string ...$frameTypes): Future
     {
         $futures = [];
 
@@ -59,6 +62,8 @@ final class Hooks implements
         $this->defers[$channelId][$frameType][] = $deferred;
         $this->queue[$channelId][spl_object_id($deferred)] = $deferred;
 
+        $this->emit(...$this->pending[$channelId][$frameType] ?? []);
+
         return $deferred->getFuture();
     }
 
@@ -73,9 +78,18 @@ final class Hooks implements
     public function emit(Protocol\Request ...$requests): void
     {
         foreach ($requests as $request) {
-            foreach ($this->defers[$request->channelId][$request->frame::class] ?? [] as $i => $f) {
-                $f->complete($request->frame);
-                unset($this->defers[$request->channelId][$request->frame::class][$i], $this->queue[$request->channelId][spl_object_id($f)]);
+            $defers = $this->defers[$request->channelId][$request->frame::class] ?? [];
+            if ($defers === []) {
+                $this->pending[$request->channelId][$request->frame::class][] = $request;
+            } else {
+                foreach ($defers as $i => $f) {
+                    $f->complete($request->frame);
+                    unset(
+                        $this->defers[$request->channelId][$request->frame::class][$i],
+                        $this->queue[$request->channelId][spl_object_id($f)],
+                        $this->pending[$request->channelId][$request->frame::class],
+                    );
+                }
             }
         }
     }

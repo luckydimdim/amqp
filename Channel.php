@@ -8,6 +8,7 @@ use Amp\Cancellation;
 use Amp\DeferredFuture;
 use Amp\NullCancellation;
 use Typhoon\Amqp091\Internal\ChannelMode;
+use Typhoon\Amqp091\Internal\Hooks;
 use Typhoon\Amqp091\Internal\Io\AmqpConnection;
 use Typhoon\Amqp091\Internal\MessageProperties;
 use Typhoon\Amqp091\Internal\Monitor;
@@ -34,6 +35,7 @@ final class Channel
         private readonly int $channelId,
         private readonly AmqpConnection $connection,
         private readonly Properties $properties,
+        private readonly Hooks $hooks,
     ) {
         $this->monitor = new Monitor();
     }
@@ -73,6 +75,69 @@ final class Channel
         })());
 
         return $this->mode === ChannelMode::confirm ? ++$this->deliveryTag : null;
+    }
+
+    /**
+     * @throws \Throwable
+     */
+    public function get(string $queue = '', bool $noAck = false): ?Delivery
+    {
+        static $permit = true;
+        if (!$permit) {
+            throw Exception\OperationNotPermitted::forGet($this->channelId);
+        }
+
+        $permit = false;
+
+        $this->connection->writeFrame(Protocol\Method::basicGet(
+            channelId: $this->channelId,
+            queue: $queue,
+            noAck: $noAck,
+        ));
+
+        $frame = $this->hooks
+            ->anyOf($this->channelId, Frame\BasicGetEmpty::class, Frame\BasicGetOk::class)
+            ->await();
+
+        /** @var ?Delivery $delivery */
+        $delivery = null;
+
+        if ($frame instanceof Frame\BasicGetOk) {
+            $header = $this->await(Frame\ContentHeader::class);
+            $n = $header->bodySize;
+            $content = '';
+
+            while ($n > 0) {
+                $contentBody = $this->await(Frame\ContentBody::class);
+                $content .= $contentBody->body;
+                $n -= \strlen($contentBody->body);
+            }
+
+            $delivery = new Delivery(
+                ack: static function (): void {},
+                nack: static function (): void {},
+                reject: static function (): void {},
+                body: $content,
+                headers: $header->properties->headers,
+                deliveryTag: $frame->deliveryTag,
+                contentType: $header->properties->contentType,
+                contentEncoding: $header->properties->contentEncoding,
+                deliveryMode: $header->properties->deliveryMode,
+                priority: $header->properties->priority,
+                correlationId: $header->properties->correlationId,
+                replyTo: $header->properties->replyTo,
+                expiration: $header->properties->expiration,
+                messageId: $header->properties->messageId,
+                timestamp: $header->properties->timestamp,
+                type: $header->properties->type,
+                userId: $header->properties->userId,
+                appId: $header->properties->appId,
+            );
+        }
+
+        $permit = true;
+
+        return $delivery;
     }
 
     /**
@@ -385,7 +450,7 @@ final class Channel
 
     public function abandon(\Throwable $e): void
     {
-        $this->connection->unsubscribe($this->channelId);
+        $this->hooks->unsubscribe($this->channelId);
         $this->monitor->cancel($e);
     }
 
@@ -402,7 +467,7 @@ final class Channel
         $deferred = new DeferredFuture();
         $this->monitor->trace($deferred);
 
-        $this->connection
+        $this->hooks
             ->subscribe($this->channelId, $frameType)
             ->map($deferred->complete(...));
 

@@ -26,9 +26,11 @@ final class MessageProperties
     private const FLAG_TYPE = 0x0020;
     private const FLAG_USER_ID = 0x0010;
     private const FLAG_APP_ID = 0x0008;
+    private const FLAG_RESERVED1 = 0x0004;
 
     /**
      * @param non-negative-int $bodyLen
+     * @param array<string, mixed> $headers
      * @param ?int<0, 9> $priority
      */
     private function __construct(
@@ -202,55 +204,55 @@ final class MessageProperties
      */
     public function write(Io\WriteBytes $writer, int $mask): Io\WriteBytes
     {
-        if ($this->hasSet($mask, self::FLAG_CONTENT_TYPE) && $this->contentType !== null) {
+        if (self::hasSet($mask, self::FLAG_CONTENT_TYPE) && $this->contentType !== null) {
             $writer->writeString($this->contentType);
         }
 
-        if ($this->hasSet($mask, self::FLAG_CONTENT_ENCODING) && $this->contentEncoding !== null) {
+        if (self::hasSet($mask, self::FLAG_CONTENT_ENCODING) && $this->contentEncoding !== null) {
             $writer->writeString($this->contentEncoding);
         }
 
-        if ($this->hasSet($mask, self::FLAG_HEADERS) && \count($this->headers) > 0) {
+        if (self::hasSet($mask, self::FLAG_HEADERS) && \count($this->headers) > 0) {
             $writer->writeTable($this->headers);
         }
 
-        if ($this->hasSet($mask, self::FLAG_DELIVERY_MODE) && $this->deliveryMode !== DeliveryMode::Whatever) {
+        if (self::hasSet($mask, self::FLAG_DELIVERY_MODE) && $this->deliveryMode !== DeliveryMode::Whatever) {
             $writer->writeUint8($this->deliveryMode->value);
         }
 
-        if ($this->hasSet($mask, self::FLAG_PRIORITY) && $this->priority !== null) {
+        if (self::hasSet($mask, self::FLAG_PRIORITY) && $this->priority !== null) {
             $writer->writeUint8($this->priority);
         }
 
-        if ($this->hasSet($mask, self::FLAG_CORRELATION_ID) && $this->correlationId !== null) {
+        if (self::hasSet($mask, self::FLAG_CORRELATION_ID) && $this->correlationId !== null) {
             $writer->writeString($this->correlationId);
         }
 
-        if ($this->hasSet($mask, self::FLAG_REPLY_TO) && $this->replyTo !== null) {
+        if (self::hasSet($mask, self::FLAG_REPLY_TO) && $this->replyTo !== null) {
             $writer->writeString($this->replyTo);
         }
 
-        if ($this->hasSet($mask, self::FLAG_EXPIRATION) && $this->expiration !== null) {
+        if (self::hasSet($mask, self::FLAG_EXPIRATION) && $this->expiration !== null) {
             $writer->writeString($this->expiration);
         }
 
-        if ($this->hasSet($mask, self::FLAG_MESSAGE_ID) && $this->messageId !== null) {
+        if (self::hasSet($mask, self::FLAG_MESSAGE_ID) && $this->messageId !== null) {
             $writer->writeString($this->messageId);
         }
 
-        if ($this->hasSet($mask, self::FLAG_TIMESTAMP) && $this->timestamp !== null && $this->timestamp->getTimestamp() > 0) {
+        if (self::hasSet($mask, self::FLAG_TIMESTAMP) && $this->timestamp !== null && $this->timestamp->getTimestamp() > 0) {
             $writer->writeTimestamp($this->timestamp);
         }
 
-        if ($this->hasSet($mask, self::FLAG_TYPE) && $this->type !== null) {
+        if (self::hasSet($mask, self::FLAG_TYPE) && $this->type !== null) {
             $writer->writeString($this->type);
         }
 
-        if ($this->hasSet($mask, self::FLAG_USER_ID) && $this->userId !== null) {
+        if (self::hasSet($mask, self::FLAG_USER_ID) && $this->userId !== null) {
             $writer->writeString($this->userId);
         }
 
-        if ($this->hasSet($mask, self::FLAG_APP_ID) && $this->appId !== null) {
+        if (self::hasSet($mask, self::FLAG_APP_ID) && $this->appId !== null) {
             $writer->writeString($this->appId);
         }
 
@@ -259,9 +261,50 @@ final class MessageProperties
 
     /**
      * @param non-negative-int $mask
+     */
+    public static function read(Io\ReadBytes $reader, int $mask): self
+    {
+        $contentType = self::hasSet($mask, self::FLAG_CONTENT_TYPE) ? $reader->readString() : null;
+        $contentEncoding = self::hasSet($mask, self::FLAG_CONTENT_ENCODING) ? $reader->readString() : null;
+        $headers = self::hasSet($mask, self::FLAG_HEADERS) ? $reader->readTable() : [];
+        $deliveryMode = self::hasSet($mask, self::FLAG_DELIVERY_MODE) ? (DeliveryMode::tryFrom($reader->readUint8()) ?: DeliveryMode::Whatever) : DeliveryMode::Whatever;
+        /** @var ?int<0, 9> $priority */
+        $priority = self::hasSet($mask, self::FLAG_PRIORITY) ? $reader->readUint8() : null;
+        $correlationId = self::hasSet($mask, self::FLAG_CORRELATION_ID) ? $reader->readString() : null;
+        $replyTo = self::hasSet($mask, self::FLAG_REPLY_TO) ? $reader->readString() : null;
+        $expiration = self::hasSet($mask, self::FLAG_EXPIRATION) ? $reader->readString() : null;
+        $messageId = self::hasSet($mask, self::FLAG_MESSAGE_ID) ? $reader->readString() : null;
+        $timestamp = self::hasSet($mask, self::FLAG_TIMESTAMP) ? $reader->readTimestamp() : null;
+        $type = self::hasSet($mask, self::FLAG_TYPE) ? $reader->readString() : null;
+        $userId = self::hasSet($mask, self::FLAG_USER_ID) ? $reader->readString() : null;
+        $appId = self::hasSet($mask, self::FLAG_APP_ID) ? $reader->readString() : null;
+
+        if (self::hasSet($mask, self::FLAG_RESERVED1)) {
+            $reader->readString();
+        }
+
+        return new self(
+            headers: $headers,
+            contentType: $contentType,
+            contentEncoding: $contentEncoding,
+            deliveryMode: $deliveryMode,
+            priority: $priority,
+            correlationId: $correlationId,
+            replyTo: $replyTo,
+            expiration: $expiration,
+            messageId: $messageId,
+            timestamp: $timestamp,
+            type: $type,
+            userId: $userId,
+            appId: $appId,
+        );
+    }
+
+    /**
+     * @param non-negative-int $mask
      * @param self::* $property
      */
-    private function hasSet(int $mask, int $property): bool
+    private static function hasSet(int $mask, int $property): bool
     {
         return ($mask & $property) > 0;
     }

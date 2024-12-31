@@ -444,6 +444,25 @@ final class Method implements Frame
         );
     }
 
+    /**
+     * @param non-negative-int $channelId
+     */
+    public static function basicGet(
+        int $channelId,
+        string $queue = '',
+        bool $noAck = false,
+    ): self {
+        return new self(
+            ClassType::BASIC,
+            ClassMethod::BASIC_GET,
+            new Frame\BasicGet(
+                queue: $queue,
+                noAck: $noAck,
+            ),
+            $channelId,
+        );
+    }
+
     public static function read(Io\ReadBytes $reader): self
     {
         throw new \BadMethodCallException('Not implemented yet.');

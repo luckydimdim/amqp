@@ -79,4 +79,6 @@ interface ReadBytes
      * @return non-empty-list<bool>
      */
     public function readBits(int $n): array;
+
+    public function reset(): string;
 }

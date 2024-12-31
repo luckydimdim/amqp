@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace Typhoon\Amqp091\Internal\Protocol;
 
 use Typhoon\Amqp091\Exception\FrameIsBroken;
-use Typhoon\Amqp091\Exception\NotImplemented;
 use Typhoon\Amqp091\Internal\Io;
+use Typhoon\Amqp091\Internal\Protocol\Frame\ContentBody;
+use Typhoon\Amqp091\Internal\Protocol\Frame\ContentHeader;
 use Typhoon\ByteOrder\ReadFrom;
 
 /**
@@ -49,8 +50,9 @@ final class Reader
 
         yield match ($type) {
             FrameType::method => Protocol::amqp091->parseMethod($this->buffer, $channelId),
-            FrameType::heartbeat => new Request(0, Heartbeat::frame),
-            default => throw new NotImplemented(),
+            FrameType::heartbeat => new Request($channelId, Heartbeat::frame),
+            FrameType::header => new Request($channelId, ContentHeader::read($this->buffer)),
+            FrameType::body => new Request($channelId, ContentBody::read($this->buffer)),
         };
 
         if ($this->reader->readUint8() !== Protocol::FRAME_END) {
