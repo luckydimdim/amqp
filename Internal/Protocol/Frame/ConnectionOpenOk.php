@@ -22,8 +22,8 @@ final class ConnectionOpenOk implements Frame
         return new self($reader->readString());
     }
 
-    public function write(Io\WriteBytes $writer): Io\WriteBytes
+    public function write(Io\WriteBytes $writer): void
     {
-        return $writer->writeString($this->knownHosts);
+        $writer->writeString($this->knownHosts);
     }
 }

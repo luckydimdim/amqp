@@ -34,9 +34,9 @@ final class ConnectionOpen implements Frame
         );
     }
 
-    public function write(Io\WriteBytes $writer): Io\WriteBytes
+    public function write(Io\WriteBytes $writer): void
     {
-        return $writer
+        $writer
             ->writeString($this->vhost)
             ->writeString($this->reserved1)
             ->writeBits($this->reserved2);

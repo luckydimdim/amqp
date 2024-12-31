@@ -47,9 +47,9 @@ final class QueueDeclare implements Frame
         );
     }
 
-    public function write(Io\WriteBytes $writer): Io\WriteBytes
+    public function write(Io\WriteBytes $writer): void
     {
-        return $writer
+        $writer
             ->writeUint16(0)
             ->writeString($this->queue)
             ->writeBits($this->passive, $this->durable, $this->exclusive, $this->autoDelete, $this->noWait)

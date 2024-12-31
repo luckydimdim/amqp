@@ -41,9 +41,9 @@ final class ExchangeDelete implements Frame
         );
     }
 
-    public function write(Io\WriteBytes $writer): Io\WriteBytes
+    public function write(Io\WriteBytes $writer): void
     {
-        return $writer
+        $writer
             ->writeUint16($this->reserved1)
             ->writeString($this->exchange)
             ->writeBits($this->ifUnused, $this->noWait);

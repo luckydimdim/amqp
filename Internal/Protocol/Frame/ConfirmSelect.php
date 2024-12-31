@@ -22,8 +22,8 @@ final class ConfirmSelect implements Frame
         return new self($reader->readBits(1)[0] ?? false);
     }
 
-    public function write(Io\WriteBytes $writer): Io\WriteBytes
+    public function write(Io\WriteBytes $writer): void
     {
-        return $writer->writeBits($this->noWait);
+        $writer->writeBits($this->noWait);
     }
 }

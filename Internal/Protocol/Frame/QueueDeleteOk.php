@@ -25,8 +25,8 @@ final class QueueDeleteOk implements Frame
         return new self($reader->readUint32());
     }
 
-    public function write(Io\WriteBytes $writer): Io\WriteBytes
+    public function write(Io\WriteBytes $writer): void
     {
-        return $writer->writeUint32($this->messages);
+        $writer->writeUint32($this->messages);
     }
 }

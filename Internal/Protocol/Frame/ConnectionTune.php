@@ -28,9 +28,9 @@ final class ConnectionTune implements Frame
         );
     }
 
-    public function write(Io\WriteBytes $writer): Io\WriteBytes
+    public function write(Io\WriteBytes $writer): void
     {
-        return $writer
+        $writer
             ->writeInt16($this->channelMax)
             ->writeInt32($this->frameMax)
             ->writeInt16($this->heartbeat);

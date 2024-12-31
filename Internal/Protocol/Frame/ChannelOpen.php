@@ -22,8 +22,8 @@ final class ChannelOpen implements Frame
         return new self($reader->readString());
     }
 
-    public function write(Io\WriteBytes $writer): Io\WriteBytes
+    public function write(Io\WriteBytes $writer): void
     {
-        return $writer->writeString($this->reserved1);
+        $writer->writeString($this->reserved1);
     }
 }

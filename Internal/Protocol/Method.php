@@ -461,9 +461,9 @@ final class Method implements Frame
         public readonly int $channelId = 0,
     ) {}
 
-    public function write(Io\WriteBytes $writer): Io\WriteBytes
+    public function write(Io\WriteBytes $writer): void
     {
-        return $writer
+        $writer
             ->writeUint8(FrameType::method->value)
             ->writeUint16($this->channelId)
             ->reserve(endian::network->packUint32(...), function (Io\WriteBytes $writer): void {

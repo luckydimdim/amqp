@@ -37,9 +37,9 @@ final class ChannelClose implements Frame
         );
     }
 
-    public function write(Io\WriteBytes $writer): Io\WriteBytes
+    public function write(Io\WriteBytes $writer): void
     {
-        return $writer
+        $writer
             ->writeUint16($this->replyCode)
             ->writeString($this->replyText)
             ->writeUint16($this->classId)

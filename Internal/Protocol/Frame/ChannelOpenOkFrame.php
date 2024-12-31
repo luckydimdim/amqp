@@ -22,8 +22,8 @@ final class ChannelOpenOkFrame implements Frame
         return new self($reader->readText());
     }
 
-    public function write(Io\WriteBytes $writer): Io\WriteBytes
+    public function write(Io\WriteBytes $writer): void
     {
-        return $writer->writeText($this->channelId);
+        $writer->writeText($this->channelId);
     }
 }

@@ -20,8 +20,5 @@ enum TxSelect implements Frame
         return self::frame;
     }
 
-    public function write(Io\WriteBytes $writer): Io\WriteBytes
-    {
-        return $writer;
-    }
+    public function write(Io\WriteBytes $writer): void {}
 }

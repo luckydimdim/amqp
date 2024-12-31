@@ -31,7 +31,7 @@ final class Header implements Frame
         throw new NotImplemented();
     }
 
-    public function write(Io\WriteBytes $writer): Io\WriteBytes
+    public function write(Io\WriteBytes $writer): void
     {
         $writer = $writer
             ->writeUint8(FrameType::header->value)
@@ -42,7 +42,7 @@ final class Header implements Frame
             ->writeUint64($this->properties->bodyLen)
             ->writeUint16($mask = $this->properties->mask());
 
-        return $this->properties
+        $this->properties
             ->write($writer, $mask)
             ->writeUint8(Protocol::FRAME_END);
     }

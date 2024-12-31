@@ -42,9 +42,9 @@ final class QueueDeclareOk implements Frame
         );
     }
 
-    public function write(Io\WriteBytes $writer): Io\WriteBytes
+    public function write(Io\WriteBytes $writer): void
     {
-        return $writer
+        $writer
             ->writeString($this->queue)
             ->writeInt32($this->messages)
             ->writeInt32($this->consumers);

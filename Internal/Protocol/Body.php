@@ -26,9 +26,9 @@ final class Body implements Frame
         throw new NotImplemented();
     }
 
-    public function write(Io\WriteBytes $writer): Io\WriteBytes
+    public function write(Io\WriteBytes $writer): void
     {
-        return $writer
+        $writer
             ->writeUint8(FrameType::body->value)
             ->writeUint16($this->channelId)
             ->writeUint32(\strlen($this->body))

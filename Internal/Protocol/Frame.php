@@ -14,5 +14,5 @@ interface Frame
 {
     public static function read(Io\ReadBytes $reader): self;
 
-    public function write(Io\WriteBytes $writer): Io\WriteBytes;
+    public function write(Io\WriteBytes $writer): void;
 }

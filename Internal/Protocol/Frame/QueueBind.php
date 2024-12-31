@@ -44,9 +44,9 @@ final class QueueBind implements Frame
         );
     }
 
-    public function write(Io\WriteBytes $writer): Io\WriteBytes
+    public function write(Io\WriteBytes $writer): void
     {
-        return $writer
+        $writer
             ->writeInt16(0)
             ->writeString($this->queue)
             ->writeString($this->exchange)

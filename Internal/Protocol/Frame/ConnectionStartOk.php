@@ -29,9 +29,9 @@ final class ConnectionStartOk implements Frame
         throw new \BadMethodCallException('Not implemented yet.');
     }
 
-    public function write(Io\WriteBytes $writer): Io\WriteBytes
+    public function write(Io\WriteBytes $writer): void
     {
-        return $writer
+        $writer
             ->writeTable($this->clientProperties)
             ->writeString($this->auth->name())
             ->reserve(endian::network->packUint32(...), $this->auth->write(...))

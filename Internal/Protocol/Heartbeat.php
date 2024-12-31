@@ -19,9 +19,9 @@ enum Heartbeat implements Frame
         return self::frame;
     }
 
-    public function write(Io\WriteBytes $writer): Io\WriteBytes
+    public function write(Io\WriteBytes $writer): void
     {
-        return $writer
+        $writer
             ->writeUint8(FrameType::heartbeat->value)
             ->writeUint16(0)
             ->writeUint32(0)

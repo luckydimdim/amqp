@@ -23,9 +23,9 @@ enum ProtocolHeader implements Frame
         return self::frame;
     }
 
-    public function write(Io\WriteBytes $writer): Io\WriteBytes
+    public function write(Io\WriteBytes $writer): void
     {
-        return $writer
+        $writer
             ->write('AMQP')
             ->writeUint8(0)
             ->writeUint8(0)

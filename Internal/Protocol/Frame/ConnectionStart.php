@@ -53,9 +53,9 @@ final class ConnectionStart implements Frame
         );
     }
 
-    public function write(Io\WriteBytes $writer): Io\WriteBytes
+    public function write(Io\WriteBytes $writer): void
     {
-        return $writer
+        $writer
             ->writeUint8($this->versionMajor)
             ->writeUint8($this->versionMinor)
             ->writeTable($this->serverProperties)
