@@ -137,6 +137,19 @@ final class Method implements Frame
 
     /**
      * @param non-negative-int $channelId
+     */
+    public static function channelFlow(int $channelId, bool $active): self
+    {
+        return new self(
+            ClassType::CHANNEL,
+            ClassMethod::CHANNEL_FLOW,
+            new Frame\ChannelFlow($active),
+            $channelId,
+        );
+    }
+
+    /**
+     * @param non-negative-int $channelId
      * @param non-empty-string $exchange
      * @param non-empty-string $exchangeType
      * @param array<string, mixed> $arguments

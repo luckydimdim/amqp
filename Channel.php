@@ -584,6 +584,16 @@ final class Channel
         $this->await(Frame\ChannelCloseOk::class);
     }
 
+    /**
+     * @throws \Throwable
+     */
+    public function flow(bool $active): void
+    {
+        $this->connection->writeFrame(Protocol\Method::channelFlow($this->channelId, $active));
+
+        $this->await(Frame\ChannelFlowOk::class);
+    }
+
     public function abandon(\Throwable $e): void
     {
         $this->hooks->unsubscribe($this->channelId);
