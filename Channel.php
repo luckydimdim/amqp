@@ -9,7 +9,9 @@ use Amp\DeferredFuture;
 use Amp\NullCancellation;
 use Typhoon\Amqp091\Internal\ChannelMode;
 use Typhoon\Amqp091\Internal\Io\AmqpConnection;
+use Typhoon\Amqp091\Internal\MessageProperties;
 use Typhoon\Amqp091\Internal\Monitor;
+use Typhoon\Amqp091\Internal\Properties;
 use Typhoon\Amqp091\Internal\Protocol;
 use Typhoon\Amqp091\Internal\Protocol\Frame;
 
@@ -22,14 +24,55 @@ final class Channel
 
     private ChannelMode $mode = ChannelMode::regular;
 
+    /** @var non-negative-int */
+    private int $deliveryTag = 0;
+
     /**
      * @param non-negative-int $channelId
      */
     public function __construct(
         private readonly int $channelId,
         private readonly AmqpConnection $connection,
+        private readonly Properties $properties,
     ) {
         $this->monitor = new Monitor();
+    }
+
+    /**
+     * @return ?non-negative-int
+     * @throws \Throwable
+     */
+    public function publish(
+        Message $message,
+        string $exchange = '',
+        string $routingKey = '',
+        bool $mandatory = false,
+        bool $immediate = false,
+    ): ?int {
+        $this->connection->writeFrame((function () use ($message, $exchange, $routingKey, $mandatory, $immediate): \Generator {
+            yield Protocol\Method::basicPublish(
+                channelId: $this->channelId,
+                exchange: $exchange,
+                routingKey: $routingKey,
+                mandatory: $mandatory,
+                immediate: $immediate,
+            );
+
+            yield new Protocol\Header(
+                channelId: $this->channelId,
+                classId: Protocol\ClassType::BASIC,
+                properties: MessageProperties::fromMessage($message),
+            );
+
+            foreach (str_split($message->body, $this->properties->maxFrame()) as $chunk) {
+                yield new Protocol\Body(
+                    channelId: $this->channelId,
+                    body: $chunk,
+                );
+            }
+        })());
+
+        return $this->mode === ChannelMode::confirm ? ++$this->deliveryTag : null;
     }
 
     /**

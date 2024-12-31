@@ -91,13 +91,20 @@ final class AmqpConnection implements Writer
     }
 
     /**
+     * @param iterable<array-key, Protocol\Frame>|Protocol\Frame $frames
      * @throws \Throwable
      */
-    public function writeFrame(Protocol\Frame $frame): void
+    public function writeFrame(iterable|Protocol\Frame $frames): void
     {
-        $frame
-            ->write($this->buffer)
-            ->writeTo($this);
+        if (!is_iterable($frames)) {
+            $frames = [$frames];
+        }
+
+        foreach ($frames as $frame) {
+            $frame->write($this->buffer);
+        }
+
+        $this->buffer->writeTo($this);
     }
 
     public function write(string $bytes): void

@@ -16,7 +16,8 @@ use Typhoon\Endian\endian;
 final class Buffer implements
     WriteBytes,
     ReadBytes,
-    WriterTo
+    WriterTo,
+    \Countable
 {
     private const DEFAULT_BUFFER_SIZE = 4096;
 
@@ -379,6 +380,11 @@ final class Buffer implements
         }
 
         return $this;
+    }
+
+    public function count(): int
+    {
+        return $this->writeCursor;
     }
 
     public function rewind(): self

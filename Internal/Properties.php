@@ -15,7 +15,7 @@ final class Properties
     /** @var non-negative-int */
     private int $maxChannel = 0xFFFF;
 
-    /** @var non-negative-int */
+    /** @var positive-int */
     private int $maxFrame = 0xFFFF;
 
     /** @var array<string, bool> */
@@ -41,7 +41,7 @@ final class Properties
 
     /**
      * @param non-negative-int $maxChannel
-     * @param non-negative-int $maxFrame
+     * @param positive-int $maxFrame
      */
     public function tune(
         int $maxChannel,
@@ -68,7 +68,7 @@ final class Properties
     }
 
     /**
-     * @return non-negative-int
+     * @return positive-int
      */
     public function maxFrame(): int
     {

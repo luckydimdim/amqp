@@ -421,6 +421,29 @@ final class Method implements Frame
         );
     }
 
+    /**
+     * @param non-negative-int $channelId
+     */
+    public static function basicPublish(
+        int $channelId,
+        string $exchange = '',
+        string $routingKey = '',
+        bool $mandatory = false,
+        bool $immediate = false,
+    ): self {
+        return new self(
+            ClassType::BASIC,
+            ClassMethod::BASIC_PUBLISH,
+            new Frame\BasicPublish(
+                exchange: $exchange,
+                routingKey: $routingKey,
+                mandatory: $mandatory,
+                immediate: $immediate,
+            ),
+            $channelId,
+        );
+    }
+
     public static function read(Io\ReadBytes $reader): self
     {
         throw new \BadMethodCallException('Not implemented yet.');

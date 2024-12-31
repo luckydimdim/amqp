@@ -103,7 +103,7 @@ final class Client
         $channelId = $this->allocateChannelId();
         $this->openChannel($channelId, $cancellation);
 
-        return new Channel($channelId, $this->connection());
+        return $this->channels[$channelId] = new Channel($channelId, $this->connection(), $this->properties);
     }
 
     /**
@@ -130,7 +130,7 @@ final class Client
         \assert($maxChannel >= 0, 'max channel must not be negative.');
 
         $maxFrame = min($this->uri->frameMax, $tune->frameMax);
-        \assert($maxFrame >= 0, 'max frame must not be negative.');
+        \assert($maxFrame > 0, 'max frame must not be negative.');
 
         $this->connection()->writeFrame(
             Protocol\Method::connectionTuneOk($maxChannel, $maxFrame, $heartbeat),

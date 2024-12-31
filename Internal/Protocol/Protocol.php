@@ -29,6 +29,7 @@ enum Protocol
         ],
         ClassType::CHANNEL => [
             ClassMethod::CHANNEL_OPEN_OK => Frame\ChannelOpenOkFrame::class,
+            ClassMethod::CHANNEL_CLOSE => Frame\ChannelClose::class,
             ClassMethod::CHANNEL_CLOSE_OK => Frame\ChannelCloseOk::class,
         ],
         ClassType::EXCHANGE => [
