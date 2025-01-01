@@ -8,10 +8,12 @@ use Amp;
 use Amp\Socket\Socket;
 use Revolt\EventLoop;
 use Typhoon\AmpBridge\AmpReaderWriter;
+use Typhoon\Amqp091\Exception\ConnectionIsClosed;
 use Typhoon\Amqp091\Internal\Hooks;
 use Typhoon\Amqp091\Internal\Protocol;
 use Typhoon\ByteBuffer\BufferedReaderWriter;
 use Typhoon\ByteOrder\ReaderWriter;
+use Typhoon\ByteReader\ReaderIsClosed;
 use Typhoon\ByteWriter\Writer;
 
 /**
@@ -28,6 +30,7 @@ final class AmqpConnection implements Writer
 
     private float $lastWrite = 0;
 
+    /** @psalm-suppress UnusedProperty used by reference. */
     private bool $isClosed = false;
 
     public function __construct(Socket $socket, Hooks $hooks)
@@ -50,6 +53,11 @@ final class AmqpConnection implements Writer
                     $hooks->emit(...$frames);
                 }
             } catch (\Throwable $e) {
+                $e = match (true) {
+                    $e instanceof ReaderIsClosed => new ConnectionIsClosed(),
+                    default => $e,
+                };
+
                 if (!$isClosed) {
                     $hooks->error($e);
                 }
