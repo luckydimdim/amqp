@@ -11,7 +11,6 @@ namespace Typhoon\Amqp091\Internal;
 final class ConsumerTagGenerator
 {
     private const TAG_LENGTH_MAX = 0xFF;
-
     private const PACKAGE_NAME = 'typhoon/amqp091';
 
     /** @var non-empty-string */

@@ -17,27 +17,39 @@ abstract class Mechanism
     final protected const AMQPLAIN = 'AMQPLAIN';
 
     /**
-     * @param list<string> $mechanisms
+     * @param non-empty-string $mechanism
+     */
+    final public static function create(string $mechanism, string $username, string $password): static
+    {
+        return match (strtoupper($mechanism)) {
+            self::PLAIN => new Plain($username, $password),
+            self::AMQPLAIN => new AMQPlain($username, $password),
+            default => throw AuthenticationMechanismIsNotSupported::forClientMechanism($mechanism),
+        };
+    }
+
+    /**
+     * @param list<self> $selected
+     * @param list<string> $available
      * @throws AuthenticationMechanismIsNotSupported
      */
     final public static function select(
-        array $mechanisms,
+        array $selected,
+        array $available,
         string $username,
         string $password,
     ): self {
-        foreach ($mechanisms as $mechanismName) {
-            $mechanism = match (strtoupper($mechanismName)) {
-                self::PLAIN => new Plain($username, $password),
-                self::AMQPLAIN => new AMQPlain($username, $password),
-                default => null,
-            };
+        if (\count($selected) === 0) {
+            $selected = [new Plain($username, $password)];
+        }
 
-            if ($mechanism !== null) {
-                return $mechanism;
+        foreach ($selected as $selectedMechanism) {
+            if (\in_array($selectedMechanism->name(), $available, true)) {
+                return $selectedMechanism;
             }
         }
 
-        throw AuthenticationMechanismIsNotSupported::for($mechanisms);
+        throw AuthenticationMechanismIsNotSupported::forServerMechanisms($available);
     }
 
     /**

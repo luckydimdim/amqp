@@ -36,7 +36,7 @@ final class Client
 
     private readonly Hooks $hooks;
 
-    public function __construct(private readonly Uri $uri)
+    public function __construct(private readonly Config $config)
     {
         $this->properties = Properties::createDefault();
         $this->monitor = new Monitor();
@@ -52,7 +52,7 @@ final class Client
     {
         if ($this->connection === null) {
             $this->connection = new AmqpConnection(
-                Socket\connect($this->uri->connectionDsn()),
+                Socket\connect($this->config->connectionDsn()),
                 $this->hooks,
             );
 
@@ -121,7 +121,12 @@ final class Client
      */
     private function connectionStart(Frame\ConnectionStart $start): void
     {
-        $auth = Auth\Mechanism::select($start->mechanisms, $this->uri->username, $this->uri->password);
+        $auth = Auth\Mechanism::select(
+            $this->config->sasl,
+            $start->mechanisms,
+            $this->config->username,
+            $this->config->password,
+        );
 
         $this->connection()->writeFrame(
             Protocol\Method::connectionStartOk($this->properties->toArray(), $auth),
@@ -133,13 +138,13 @@ final class Client
      */
     private function connectionTune(Frame\ConnectionTune $tune): void
     {
-        $heartbeat = min($this->uri->heartbeat, $tune->heartbeat);
+        $heartbeat = min($this->config->heartbeat, $tune->heartbeat);
         \assert($heartbeat >= 0, 'heartbeat must not be negative.');
 
-        $maxChannel = min($this->uri->channelMax, $tune->channelMax);
+        $maxChannel = min($this->config->channelMax, $tune->channelMax);
         \assert($maxChannel >= 0, 'max channel must not be negative.');
 
-        $maxFrame = min($this->uri->frameMax, $tune->frameMax);
+        $maxFrame = min($this->config->frameMax, $tune->frameMax);
         \assert($maxFrame > 0, 'max frame must not be negative.');
 
         $this->connection()->writeFrame(
@@ -158,7 +163,7 @@ final class Client
      */
     private function connectionOpen(Cancellation $cancellation): void
     {
-        $this->connection()->writeFrame(Protocol\Method::connectionOpen($this->uri->vhost));
+        $this->connection()->writeFrame(Protocol\Method::connectionOpen($this->config->vhost));
 
         $this->await(Frame\ConnectionOpenOk::class, cancellation: $cancellation);
     }

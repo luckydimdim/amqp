@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Typhoon\Amqp091;
 
 use Typhoon\Amqp091\Exception\UriIsInvalid;
+use Typhoon\Amqp091\Internal\Protocol\Auth\Mechanism;
 
 /**
  * @api
- * @see https://www.rabbitmq.com/docs/uri-spec
  */
-final class Uri
+final class Config
 {
     private const DEFAULT_HOST = 'localhost';
     private const DEFAULT_PORT = 5672;
@@ -28,10 +28,12 @@ final class Uri
     }
 
     /**
+     * @see https://www.rabbitmq.com/docs/uri-spec
+     *
      * @param non-empty-string $uri
      * @throws UriIsInvalid
      */
-    public static function parse(string $uri): self
+    public static function fromURI(string $uri): self
     {
         $components = parse_url($uri);
 
@@ -108,12 +110,22 @@ final class Uri
             $vhost = $components['path'];
         }
 
+        $username = self::DEFAULT_USERNAME;
+        if (isset($components['user']) && $components['user'] !== '') {
+            $username = $components['user'];
+        }
+
+        $password = self::DEFAULT_PASSWORD;
+        if (isset($components['pass']) && $components['pass'] !== '') {
+            $password = $components['pass'];
+        }
+
         return new self(
             scheme: Scheme::tryFrom($components['scheme'] ?? Scheme::amqp->value) ?: throw UriIsInvalid::invalidScheme($components['scheme'] ?? ''),
             host: $host,
             port: $port,
-            username: $components['user'] ?? self::DEFAULT_USERNAME,
-            password: $components['pass'] ?? self::DEFAULT_PASSWORD,
+            username: $username,
+            password: $password,
             vhost: $vhost,
             certFile: $certFile,
             keyFile: $keyFile,
@@ -124,6 +136,7 @@ final class Uri
             connectionTimeout: $connectionTimeout,
             channelMax: $channelMax,
             frameMax: $frameMax,
+            sasl: array_map(static fn(string $mechanism): Mechanism => Mechanism::create($mechanism, $username, $password), $authMechanisms),
         );
     }
 
@@ -144,6 +157,7 @@ final class Uri
      * @param positive-int $connectionTimeout
      * @param int<0, 65535> $channelMax
      * @param int<0, 65535> $frameMax
+     * @param list<Mechanism> $sasl
      */
     private function __construct(
         public readonly Scheme $scheme = Scheme::amqp,
@@ -161,5 +175,6 @@ final class Uri
         public readonly int $connectionTimeout = self::DEFAULT_CONNECTION_TIMEOUT,
         public readonly int $channelMax = self::MAX_CHANNEL,
         public readonly int $frameMax = self::MAX_FRAME,
+        public readonly array $sasl = [],
     ) {}
 }
