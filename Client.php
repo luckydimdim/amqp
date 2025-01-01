@@ -50,38 +50,47 @@ final class Client
      */
     public function connect(Cancellation $cancellation = new NullCancellation()): void
     {
-        if ($this->connection === null) {
-            $this->connection = new AmqpConnection(
-                Socket\connect($this->config->connectionDsn()),
-                $this->hooks,
-            );
-
-            $this->connection->writeFrame(Frame\ProtocolHeader::frame);
-
-            $this->connectionStart(
-                $this->await(Frame\ConnectionStart::class, cancellation: $cancellation),
-            );
-
-            $this->connectionTune(
-                $this->await(Frame\ConnectionTune::class, cancellation: $cancellation),
-            );
-
-            $this->connectionOpen($cancellation);
-
-            $this->hooks->subscribe(0, Frame\ConnectionClose::class)->map(function (Frame\ConnectionClose $close): void {
-                $this->connection()->writeFrame(Protocol\Method::connectionCloseOk());
-                $this->connection()->close();
-
-                $error = Exception\ConnectionWasClosed::byServer($close->replyCode, $close->replyText);
-
-                foreach ($this->channels as $channel) {
-                    $channel->abandon($error);
-                }
-
-                $this->channels = [];
-                $this->monitor->cancel($error);
-            });
+        if ($this->connection !== null) {
+            return;
         }
+
+        $context = (new Socket\ConnectContext())
+            ->withConnectTimeout($this->config->connectionTimeout);
+
+        if ($this->config->tcpNoDelay) {
+            $context = $context->withTcpNoDelay();
+        }
+
+        $this->connection = new AmqpConnection(
+            Socket\connect($this->config->connectionDsn(), $context),
+            $this->hooks,
+        );
+
+        $this->connection->writeFrame(Frame\ProtocolHeader::frame);
+
+        $this->connectionStart(
+            $this->await(Frame\ConnectionStart::class, cancellation: $cancellation),
+        );
+
+        $this->connectionTune(
+            $this->await(Frame\ConnectionTune::class, cancellation: $cancellation),
+        );
+
+        $this->connectionOpen($cancellation);
+
+        $this->hooks->subscribe(0, Frame\ConnectionClose::class)->map(function (Frame\ConnectionClose $close): void {
+            $this->connection()->writeFrame(Protocol\Method::connectionCloseOk());
+            $this->connection()->close();
+
+            $error = Exception\ConnectionWasClosed::byServer($close->replyCode, $close->replyText);
+
+            foreach ($this->channels as $channel) {
+                $channel->abandon($error);
+            }
+
+            $this->channels = [];
+            $this->monitor->cancel($error);
+        });
     }
 
     /**

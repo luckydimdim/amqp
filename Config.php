@@ -95,6 +95,11 @@ final class Config
             $frameMax = min($frameMax, (int) $query['frame_max']);
         }
 
+        $tcpNoDelay = false;
+        if (isset($query['tcp_nodelay']) && ($nodelay = filter_var($query['tcp_nodelay'], FILTER_VALIDATE_BOOL))) {
+            $tcpNoDelay = $nodelay;
+        }
+
         $host = self::DEFAULT_HOST;
         if (isset($components['host']) && $components['host'] !== '') {
             $host = $components['host'];
@@ -137,6 +142,7 @@ final class Config
             channelMax: $channelMax,
             frameMax: $frameMax,
             sasl: array_map(static fn(string $mechanism): Mechanism => Mechanism::create($mechanism, $username, $password), $authMechanisms),
+            tcpNoDelay: $tcpNoDelay,
         );
     }
 
@@ -176,5 +182,6 @@ final class Config
         public readonly int $channelMax = self::MAX_CHANNEL,
         public readonly int $frameMax = self::MAX_FRAME,
         public readonly array $sasl = [],
+        public readonly bool $tcpNoDelay = false,
     ) {}
 }
