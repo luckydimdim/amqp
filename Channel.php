@@ -9,6 +9,7 @@ use Amp\DeferredFuture;
 use Amp\NullCancellation;
 use Typhoon\Amqp091\Internal\ChannelMode;
 use Typhoon\Amqp091\Internal\Consumer;
+use Typhoon\Amqp091\Internal\ConsumerTagGenerator;
 use Typhoon\Amqp091\Internal\Hooks;
 use Typhoon\Amqp091\Internal\Io\AmqpConnection;
 use Typhoon\Amqp091\Internal\MessageProperties;
@@ -25,6 +26,8 @@ final class Channel
     private readonly Monitor $monitor;
 
     private readonly Consumer $consumer;
+
+    private readonly ConsumerTagGenerator $consumerTags;
 
     private ChannelMode $mode = ChannelMode::regular;
 
@@ -43,6 +46,7 @@ final class Channel
         private readonly Hooks $hooks,
     ) {
         $this->monitor = new Monitor();
+        $this->consumerTags = new ConsumerTagGenerator();
         $this->consumer = new Consumer(
             $this,
             $this->hooks,
@@ -223,6 +227,7 @@ final class Channel
     /**
      * @param callable(Delivery): void $callback
      * @param array<string, mixed> $arguments
+     * @return non-empty-string
      * @throws \Throwable
      */
     public function consume(
@@ -235,6 +240,10 @@ final class Channel
         bool $noWait = false,
         array $arguments = [],
     ): string {
+        if ($consumerTag === '') {
+            $consumerTag = $this->consumerTags->next();
+        }
+
         $this->connection->writeFrame(Protocol\Method::basicConsume(
             channelId: $this->channelId,
             queue: $queue,
@@ -247,11 +256,7 @@ final class Channel
         ));
 
         if (!$noWait) {
-            $frame = $this->await(Frame\BasicConsumeOk::class);
-
-            if ($consumerTag === '') {
-                $consumerTag = $frame->consumerTag;
-            }
+            $this->await(Frame\BasicConsumeOk::class);
         }
 
         $this->consumer->register($consumerTag, $callback);
