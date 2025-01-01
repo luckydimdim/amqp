@@ -6,8 +6,6 @@ namespace Typhoon\Amqp091\Internal\Protocol;
 
 use Typhoon\Amqp091\Exception\FrameIsBroken;
 use Typhoon\Amqp091\Internal\Io;
-use Typhoon\Amqp091\Internal\Protocol\Frame\ContentBody;
-use Typhoon\Amqp091\Internal\Protocol\Frame\ContentHeader;
 use Typhoon\ByteOrder\ReadFrom;
 
 /**
@@ -48,15 +46,17 @@ final class Reader
                 ->rewind();
         }
 
-        yield match ($type) {
-            FrameType::method => Protocol::amqp091->parseMethod($this->buffer, $channelId),
-            FrameType::heartbeat => new Request($channelId, Heartbeat::frame),
-            FrameType::header => new Request($channelId, ContentHeader::read($this->buffer)),
-            FrameType::body => new Request($channelId, ContentBody::read($this->buffer)),
+        $frame = match ($type) {
+            FrameType::method => Protocol::amqp091->parseMethod($this->buffer),
+            FrameType::header => Protocol::amqp091->parseHeader($this->buffer),
+            FrameType::body => Protocol::amqp091->parseBody($this->buffer),
+            FrameType::heartbeat => Heartbeat::frame,
         };
 
         if ($this->reader->readUint8() !== Protocol::FRAME_END) {
             throw new FrameIsBroken();
         }
+
+        yield new Request($channelId, $frame);
     }
 }

@@ -65,17 +65,21 @@ enum Protocol
         ],
     ];
 
-    /**
-     * @param non-negative-int $channelId
-     */
-    public function parseMethod(Io\ReadBytes $reader, int $channelId): Request
+    public function parseMethod(Io\ReadBytes $reader): Frame
     {
         $classId = $reader->readUint16();
         $methodId = $reader->readUint16();
 
-        return new Request(
-            $channelId,
-            (self::METHODS[$classId][$methodId] ?? throw UnsupportedClassMethod::forClassMethod($classId, $methodId))::read($reader),
-        );
+        return (self::METHODS[$classId][$methodId] ?? throw UnsupportedClassMethod::forClassMethod($classId, $methodId))::read($reader);
+    }
+
+    public function parseHeader(Io\ReadBytes $reader): Frame
+    {
+        return Frame\ContentHeader::read($reader);
+    }
+
+    public function parseBody(Io\ReadBytes $reader): Frame
+    {
+        return Frame\ContentBody::read($reader);
     }
 }
