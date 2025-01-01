@@ -6,7 +6,6 @@ namespace Typhoon\Amqp091\Internal;
 
 use Amp\DeferredFuture;
 use Amp\Future;
-use Revolt\EventLoop;
 
 /**
  * @internal
@@ -17,36 +16,28 @@ final class Hooks implements
     \IteratorAggregate,
     \Countable
 {
-    /** @var array<non-negative-int, array<class-string<Protocol\Frame>, list<DeferredFuture<Protocol\Frame>>>> */
+    /** @var array<non-negative-int, array<class-string<Protocol\Frame>, list<callable(Protocol\Frame): void>>> */
     private array $defers = [];
 
     /** @var array<non-negative-int, array<int, DeferredFuture<Protocol\Frame>>> */
     private array $queue = [];
 
-    /** @var array<non-negative-int, array<class-string<Protocol\Frame>, list<Protocol\Request>>> */
-    private array $pending = [];
-
     /**
      * @template T of Protocol\Frame
      * @param non-negative-int $channelId
-     * @param class-string<T> ...$frameTypes
-     * @return Future<T>
+     * @param non-empty-list<class-string<T>> $frameTypes
+     * @param callable(T): void $subscriber
      */
-    public function anyOf(int $channelId, string ...$frameTypes): Future
+    public function anyOf(int $channelId, array $frameTypes, callable $subscriber): void
     {
-        $futures = [];
-
         foreach ($frameTypes as $frameType) {
-            $futures[] = $this->subscribe($channelId, $frameType);
+            $idx = \count($this->defers[$channelId][$frameType] ?? []);
+
+            $this->defers[$channelId][$frameType][] = function (Protocol\Frame $frame) use ($channelId, $frameType, $idx, $subscriber): void {
+                $subscriber($frame);
+                unset($this->defers[$channelId][$frameType][$idx]);
+            };
         }
-
-        /** @var DeferredFuture<T> $deferred */
-        $deferred = new DeferredFuture();
-        EventLoop::queue(static function () use ($deferred, $futures): void {
-            $deferred->complete(Future\awaitFirst($futures));
-        });
-
-        return $deferred->getFuture();
     }
 
     /**
@@ -55,16 +46,43 @@ final class Hooks implements
      * @param class-string<T> $frameType
      * @return Future<T>
      */
-    public function subscribe(int $channelId, string $frameType): Future
+    public function oneshot(int $channelId, string $frameType): Future
     {
         /** @var DeferredFuture<T> $deferred */
         $deferred = new DeferredFuture();
-        $this->defers[$channelId][$frameType][] = $deferred;
+
+        $idx = \count($this->defers[$channelId][$frameType] ?? []);
+        $this->defers[$channelId][$frameType][] = function (Protocol\Frame $frame) use ($deferred, $channelId, $frameType, $idx): void {
+            $deferred->complete($frame);
+            unset(
+                $this->defers[$channelId][$frameType][$idx],
+                $this->queue[$channelId][spl_object_id($deferred)],
+            );
+        };
         $this->queue[$channelId][spl_object_id($deferred)] = $deferred;
 
-        $this->emit(...$this->pending[$channelId][$frameType] ?? []);
-
         return $deferred->getFuture();
+    }
+
+    /**
+     * @template T of Protocol\Frame
+     * @param non-negative-int $channelId
+     * @param class-string<T> $frameType
+     * @param callable(T): void $subscriber
+     */
+    public function subscribe(int $channelId, string $frameType, callable $subscriber): void
+    {
+        $this->defers[$channelId][$frameType][] = $subscriber;
+    }
+
+    public function reject(int $channelId, \Throwable $e): void
+    {
+        $defers = $this->queue[$channelId] ?? [];
+        unset($this->queue[$channelId], $this->defers[$channelId]);
+
+        foreach ($defers as $f) {
+            $f->error($e);
+        }
     }
 
     /**
@@ -72,24 +90,14 @@ final class Hooks implements
      */
     public function unsubscribe(int $channelId): void
     {
-        unset($this->defers[$channelId], $this->queue[$channelId], $this->pending[$channelId]);
+        unset($this->defers[$channelId], $this->queue[$channelId]);
     }
 
     public function emit(Protocol\Request ...$requests): void
     {
         foreach ($requests as $request) {
-            $defers = $this->defers[$request->channelId][$request->frame::class] ?? [];
-            if ($defers === []) {
-                $this->pending[$request->channelId][$request->frame::class][] = $request;
-            } else {
-                foreach ($defers as $i => $f) {
-                    $f->complete($request->frame);
-                    unset(
-                        $this->defers[$request->channelId][$request->frame::class][$i],
-                        $this->queue[$request->channelId][spl_object_id($f)],
-                        $this->pending[$request->channelId][$request->frame::class],
-                    );
-                }
+            foreach ($this->defers[$request->channelId][$request->frame::class] ?? [] as $f) {
+                $f($request->frame);
             }
         }
     }

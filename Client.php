@@ -6,12 +6,10 @@ namespace Typhoon\Amqp091;
 
 use Amp\Cancellation;
 use Amp\CancelledException;
-use Amp\DeferredFuture;
 use Amp\NullCancellation;
 use Amp\Socket;
 use Typhoon\Amqp091\Internal\Hooks;
 use Typhoon\Amqp091\Internal\Io\AmqpConnection;
-use Typhoon\Amqp091\Internal\Monitor;
 use Typhoon\Amqp091\Internal\Properties;
 use Typhoon\Amqp091\Internal\Protocol;
 use Typhoon\Amqp091\Internal\Protocol\Auth;
@@ -32,14 +30,11 @@ final class Client
 
     private readonly Properties $properties;
 
-    private readonly Monitor $monitor;
-
     private readonly Hooks $hooks;
 
     public function __construct(private readonly Config $config)
     {
         $this->properties = Properties::createDefault();
-        $this->monitor = new Monitor();
         $this->hooks = new Hooks();
     }
 
@@ -78,7 +73,7 @@ final class Client
 
         $this->connectionOpen($cancellation);
 
-        $this->hooks->subscribe(0, Frame\ConnectionClose::class)->map(function (Frame\ConnectionClose $close): void {
+        $this->hooks->oneshot(0, Frame\ConnectionClose::class)->map(function (Frame\ConnectionClose $close): void {
             $this->connection()->writeFrame(Protocol\Method::connectionCloseOk());
             $this->connection()->close();
 
@@ -89,7 +84,6 @@ final class Client
             }
 
             $this->channels = [];
-            $this->monitor->cancel($error);
         });
     }
 
@@ -198,21 +192,24 @@ final class Client
 
         $this->await(Frame\ChannelOpenOkFrame::class, $channelId, $cancellation);
 
-        $this->hooks
-            ->anyOf($channelId, Frame\ChannelCloseOk::class, Frame\ChannelClose::class)
-            ->map(function (Frame\ChannelCloseOk|Frame\ChannelClose $frame) use ($channelId): void {
+        $this->hooks->anyOf(
+            $channelId,
+            [Frame\ChannelCloseOk::class, Frame\ChannelClose::class],
+            function (Frame\ChannelCloseOk|Frame\ChannelClose $frame) use ($channelId): void {
                 $channel = $this->channels[$channelId] ?? null;
 
                 if ($channel !== null) {
-                    $this->hooks->unsubscribe($channelId);
                     unset($this->channels[$channelId]);
 
                     if ($frame instanceof Frame\ChannelClose) {
                         $this->connection()->writeFrame(Protocol\Method::channelCloseOk($channelId));
-                        $channel->abandon(Exception\ChannelWasClosed::byServer($frame->replyCode, $frame->replyText));
+                        $channel->abandon(new Exception\ChannelWasClosed($frame->replyCode, $frame->replyText));
                     }
+
+                    $this->hooks->unsubscribe($channelId);
                 }
-            });
+            },
+        );
     }
 
     /**
@@ -258,17 +255,8 @@ final class Client
         int $channelId = 0,
         Cancellation $cancellation = new NullCancellation(),
     ): Frame {
-        /** @var DeferredFuture<T> $deferred */
-        $deferred = new DeferredFuture();
-        $this->monitor->trace($deferred);
-
-        $this
-            ->hooks
-            ->subscribe($channelId, $frameType)
-            ->map($deferred->complete(...));
-
-        return $deferred
-            ->getFuture()
+        return $this->hooks
+            ->oneshot($channelId, $frameType)
             ->await($cancellation);
     }
 }

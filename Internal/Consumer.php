@@ -34,9 +34,6 @@ final class Consumer
     /** @var array<string, Listener> */
     private array $listeners = [];
 
-    /** @var array<string, list<Delivery>> */
-    private array $pending = [];
-
     /**
      * @param non-negative-int $channelId
      */
@@ -59,11 +56,6 @@ final class Consumer
     public function register(string $consumerTag, callable $callback): void
     {
         $this->listeners[$consumerTag] = $callback;
-
-        foreach ($this->pending[$consumerTag] ?? [] as $i => $delivery) {
-            $callback($delivery);
-            unset($this->pending[$consumerTag][$i]);
-        }
     }
 
     /**
@@ -133,11 +125,10 @@ final class Consumer
             appId: $this->header->properties->appId,
         );
 
-        $listener = $this->listeners[$this->delivery->consumerTag] ?? function (Delivery $delivery): void {
-            $this->pending[$this->delivery->consumerTag][] = $delivery;
-        };
-
-        $listener($delivery);
+        $listener = $this->listeners[$this->delivery->consumerTag] ?? null;
+        if ($listener !== null) {
+            $listener($delivery);
+        }
 
         $this->delivery = null;
         $this->header = null;
@@ -152,11 +143,6 @@ final class Consumer
      */
     private function subscribe(string $frameType, \Closure $callback): void
     {
-        // TODO split oneshot futures from subscriptions.
-
-        $this->hooks
-            ->subscribe($this->channelId, $frameType)
-            ->map($callback)
-            ->finally($this->run(...));
+        $this->hooks->subscribe($this->channelId, $frameType, $callback);
     }
 }

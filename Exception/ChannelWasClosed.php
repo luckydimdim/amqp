@@ -11,8 +11,11 @@ use Typhoon\Amqp091\Amqp091Exception;
  */
 final class ChannelWasClosed extends \RuntimeException implements Amqp091Exception
 {
-    public static function byServer(int $replyCode, string $replyText): self
-    {
-        return new self("Channel was closed by the server {$replyText}.", $replyCode);
+    public function __construct(
+        public readonly int $replyCode,
+        public readonly string $replyText,
+        ?\Throwable $previous = null,
+    ) {
+        parent::__construct("Channel was closed by the server {$this->replyText}.", $this->replyCode, $previous);
     }
 }

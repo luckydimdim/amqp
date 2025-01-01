@@ -28,10 +28,9 @@ final class Reader
     }
 
     /**
-     * @return iterable<array-key, Request>
      * @throws \Throwable
      */
-    public function iterate(): iterable
+    public function read(): Request
     {
         $this->buffer
             ->write($this->reader->read(self::HEADER_SIZE))
@@ -57,6 +56,6 @@ final class Reader
             throw new FrameIsBroken();
         }
 
-        yield new Request($channelId, $frame);
+        return new Request($channelId, $frame);
     }
 }

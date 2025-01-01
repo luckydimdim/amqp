@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Typhoon\Amqp091;
 
 use Amp\Cancellation;
-use Amp\DeferredFuture;
+use Amp\Future;
 use Amp\NullCancellation;
 use Typhoon\Amqp091\Internal\ChannelMode;
 use Typhoon\Amqp091\Internal\Consumer;
@@ -13,7 +13,6 @@ use Typhoon\Amqp091\Internal\ConsumerTagGenerator;
 use Typhoon\Amqp091\Internal\Hooks;
 use Typhoon\Amqp091\Internal\Io\AmqpConnection;
 use Typhoon\Amqp091\Internal\MessageProperties;
-use Typhoon\Amqp091\Internal\Monitor;
 use Typhoon\Amqp091\Internal\Properties;
 use Typhoon\Amqp091\Internal\Protocol;
 use Typhoon\Amqp091\Internal\Protocol\Frame;
@@ -23,8 +22,6 @@ use Typhoon\Amqp091\Internal\Protocol\Frame;
  */
 final class Channel
 {
-    private readonly Monitor $monitor;
-
     private readonly Consumer $consumer;
 
     private readonly ConsumerTagGenerator $consumerTags;
@@ -45,7 +42,6 @@ final class Channel
         private readonly Properties $properties,
         private readonly Hooks $hooks,
     ) {
-        $this->monitor = new Monitor();
         $this->consumerTags = new ConsumerTagGenerator();
         $this->consumer = new Consumer(
             $this,
@@ -111,9 +107,10 @@ final class Channel
             noAck: $noAck,
         ));
 
-        $frame = $this->hooks
-            ->anyOf($this->channelId, Frame\BasicGetEmpty::class, Frame\BasicGetOk::class)
-            ->await();
+        $frame = Future\awaitFirst([
+            $this->hooks->oneshot($this->channelId, Frame\BasicGetOk::class),
+            $this->hooks->oneshot($this->channelId, Frame\BasicGetEmpty::class),
+        ]);
 
         /** @var ?Delivery $delivery */
         $delivery = null;
@@ -607,8 +604,8 @@ final class Channel
 
     public function abandon(\Throwable $e): void
     {
+        $this->hooks->reject($this->channelId, $e);
         $this->hooks->unsubscribe($this->channelId);
-        $this->monitor->cancel($e);
     }
 
     /**
@@ -620,16 +617,8 @@ final class Channel
         string $frameType,
         Cancellation $cancellation = new NullCancellation(),
     ): Frame {
-        /** @var DeferredFuture<T> $deferred */
-        $deferred = new DeferredFuture();
-        $this->monitor->trace($deferred);
-
-        $this->hooks
-            ->subscribe($this->channelId, $frameType)
-            ->map($deferred->complete(...));
-
-        return $deferred
-            ->getFuture()
+        return $this->hooks
+            ->oneshot($this->channelId, $frameType)
             ->await($cancellation);
     }
 }
