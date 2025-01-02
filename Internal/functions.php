@@ -51,3 +51,18 @@ function queryIterator(string $query): \Generator
         }
     }
 }
+
+/**
+ * @internal
+ * @psalm-internal Typhoon\Amqp091
+ * @param positive-int $length
+ * @return iterable<non-empty-string>
+ */
+function chunks(string $v, int $length): iterable
+{
+    foreach (str_split($v, $length) as $chunk) {
+        if ($chunk !== '') {
+            yield $chunk;
+        }
+    }
+}

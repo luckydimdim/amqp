@@ -78,7 +78,7 @@ final class Channel
                 properties: MessageProperties::fromMessage($message),
             );
 
-            foreach (str_split($message->body, $this->properties->maxFrame()) as $chunk) {
+            foreach (Internal\chunks($message->body, $this->properties->maxFrame()) as $chunk) {
                 yield new Protocol\Body(
                     channelId: $this->channelId,
                     body: $chunk,
