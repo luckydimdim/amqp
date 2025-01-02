@@ -16,11 +16,20 @@ final class Hooks implements
     \IteratorAggregate,
     \Countable
 {
-    /** @var array<non-negative-int, array<class-string<Protocol\Frame>, list<callable(Protocol\Frame): void>>> */
-    private array $defers = [];
+    public static function create(): self
+    {
+        return new self();
+    }
 
-    /** @var array<non-negative-int, array<int, DeferredFuture<Protocol\Frame>>> */
-    private array $queue = [];
+    /**
+     * @template E of Protocol\Frame
+     * @param array<non-negative-int, array<non-empty-string, list<callable(E): void>>> $defers
+     * @param array<non-negative-int, array<int, DeferredFuture<Protocol\Frame>>> $queue
+     */
+    private function __construct(
+        private array $defers = [],
+        private array $queue = [],
+    ) {}
 
     /**
      * @template T of Protocol\Frame
@@ -33,10 +42,12 @@ final class Hooks implements
         foreach ($frameTypes as $frameType) {
             $idx = \count($this->defers[$channelId][$frameType] ?? []);
 
-            $this->defers[$channelId][$frameType][] = function (Protocol\Frame $frame) use ($channelId, $frameType, $idx, $subscriber): void {
-                $subscriber($frame);
-                unset($this->defers[$channelId][$frameType][$idx]);
-            };
+            $this->defers[$channelId][$frameType][] =
+                /** @param T $frame */
+                function (Protocol\Frame $frame) use ($channelId, $frameType, $idx, $subscriber): void {
+                    $subscriber($frame);
+                    unset($this->defers[$channelId][$frameType][$idx]);
+                };
         }
     }
 
@@ -52,13 +63,15 @@ final class Hooks implements
         $deferred = new DeferredFuture();
 
         $idx = \count($this->defers[$channelId][$frameType] ?? []);
-        $this->defers[$channelId][$frameType][] = function (Protocol\Frame $frame) use ($deferred, $channelId, $frameType, $idx): void {
-            $deferred->complete($frame);
-            unset(
-                $this->defers[$channelId][$frameType][$idx],
-                $this->queue[$channelId][spl_object_id($deferred)],
-            );
-        };
+        $this->defers[$channelId][$frameType][] =
+            /** @param T $frame */
+            function (Protocol\Frame $frame) use ($deferred, $channelId, $frameType, $idx): void {
+                $deferred->complete($frame);
+                unset(
+                    $this->defers[$channelId][$frameType][$idx],
+                    $this->queue[$channelId][spl_object_id($deferred)],
+                );
+            };
         $this->queue[$channelId][spl_object_id($deferred)] = $deferred;
 
         return $deferred->getFuture();
@@ -97,6 +110,7 @@ final class Hooks implements
     {
         foreach ($requests as $request) {
             foreach ($this->defers[$request->channelId][$request->frame::class] ?? [] as $f) {
+                /** @psalm-suppress InvalidArgument this is ok. */
                 $f($request->frame);
             }
         }
