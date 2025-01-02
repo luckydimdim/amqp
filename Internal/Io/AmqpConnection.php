@@ -130,7 +130,9 @@ final class AmqpConnection implements Writer
                 }
             }
 
-            $queue->complete();
+            if (!$queue->isComplete()) {
+                $queue->complete();
+            }
         });
     }
 
