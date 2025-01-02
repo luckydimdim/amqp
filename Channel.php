@@ -587,9 +587,9 @@ final class Channel
             $this->connection->writeFrame(Protocol\Method::channelClose($this->channelId, $replyCode, $replyText));
 
             $this->await(Frame\ChannelCloseOk::class);
-        }
 
-        $this->isClosed = true;
+            $this->isClosed = true;
+        }
     }
 
     /**

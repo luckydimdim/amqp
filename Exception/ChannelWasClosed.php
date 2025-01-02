@@ -16,6 +16,6 @@ final class ChannelWasClosed extends \RuntimeException implements Amqp091Excepti
         public readonly string $replyText,
         ?\Throwable $previous = null,
     ) {
-        parent::__construct("Channel was closed by the server {$this->replyText}.", $this->replyCode, $previous);
+        parent::__construct("Channel was closed by the server: {$this->replyText}.", $this->replyCode, $previous);
     }
 }

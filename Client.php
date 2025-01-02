@@ -35,7 +35,7 @@ final class Client
     public function __construct(private readonly Config $config)
     {
         $this->properties = Properties::createDefault();
-        $this->hooks = new Hooks();
+        $this->hooks = Hooks::create();
     }
 
     /**

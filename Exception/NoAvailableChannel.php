@@ -16,6 +16,6 @@ final class NoAvailableChannel extends \RuntimeException implements Amqp091Excep
      */
     public static function forMaxChannel(int $maxChannel): self
     {
-        return new self("You've used {$maxChannel} of the {$maxChannel} channels.");
+        return new self("You have exceeded the channel limit ({$maxChannel}).");
     }
 }
