@@ -524,6 +524,10 @@ final class Channel
             throw Exception\ChannelModeIsImpossible::inConfirmation($this->channelId);
         }
 
+        if ($this->mode->transactional()) {
+            throw Exception\ChannelModeIsImpossible::alreadyTransactional($this->channelId);
+        }
+
         $this->connection->writeFrame(Protocol\Method::txSelect($this->channelId));
 
         $this->await(Frame\TxSelectOk::class);
@@ -566,6 +570,10 @@ final class Channel
     {
         if ($this->mode->transactional()) {
             throw Exception\ChannelModeIsImpossible::inTransactional($this->channelId);
+        }
+
+        if ($this->mode->confirming()) {
+            throw Exception\ChannelModeIsImpossible::alreadyConfirming($this->channelId);
         }
 
         $this->connection->writeFrame(Protocol\Method::confirmSelect($this->channelId, $noWait));

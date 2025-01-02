@@ -26,4 +26,20 @@ final class ChannelModeIsImpossible extends \LogicException implements Amqp091Ex
     {
         return new self("Cannot put transactional channel {$channelId} in confirming mode.");
     }
+
+    /**
+     * @param non-negative-int $channelId
+     */
+    public static function alreadyTransactional(int $channelId): self
+    {
+        return new self("Channel {$channelId} is already transactional.");
+    }
+
+    /**
+     * @param non-negative-int $channelId
+     */
+    public static function alreadyConfirming(int $channelId): self
+    {
+        return new self("Channel {$channelId} is already confirming.");
+    }
 }
