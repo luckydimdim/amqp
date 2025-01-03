@@ -9,8 +9,9 @@ use Amp\Future;
 use Amp\NullCancellation;
 use Typhoon\Amqp091\Internal\ChannelMode;
 use Typhoon\Amqp091\Internal\ConfirmationListener;
-use Typhoon\Amqp091\Internal\Consumer;
-use Typhoon\Amqp091\Internal\ConsumerTagGenerator;
+use Typhoon\Amqp091\Internal\Delivery\Consumer;
+use Typhoon\Amqp091\Internal\Delivery\ConsumerTagGenerator;
+use Typhoon\Amqp091\Internal\Delivery\Receiver;
 use Typhoon\Amqp091\Internal\Hooks;
 use Typhoon\Amqp091\Internal\Io\AmqpConnection;
 use Typhoon\Amqp091\Internal\MessageProperties;
@@ -23,6 +24,10 @@ use Typhoon\Amqp091\Internal\Protocol\Frame;
  */
 final class Channel
 {
+    public readonly Returns $returns;
+
+    private readonly Receiver $receiver;
+
     private readonly Consumer $consumer;
 
     private readonly ConsumerTagGenerator $consumerTags;
@@ -42,17 +47,13 @@ final class Channel
         private readonly Properties $properties,
         private readonly Hooks $hooks,
     ) {
+        $this->receiver = new Receiver($this, $this->hooks, $this->channelId);
         $this->consumerTags = new ConsumerTagGenerator();
-        $this->confirms = new ConfirmationListener(
-            $this->hooks,
-            $this->channelId,
-        );
-        $this->consumer = new Consumer(
-            $this,
-            $this->hooks,
-            $this->channelId,
-        );
+        $this->consumer = new Consumer($this->receiver, $this);
+        $this->confirms = new ConfirmationListener($this->hooks, $this->channelId);
+        $this->returns = Returns::fromReceiver($this->receiver);
 
+        $this->receiver->run();
         $this->consumer->run();
     }
 
@@ -602,6 +603,7 @@ final class Channel
 
             $this->await(Frame\ChannelCloseOk::class);
 
+            $this->receiver->stop();
             $this->isClosed = true;
         }
     }

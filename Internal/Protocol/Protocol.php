@@ -65,6 +65,7 @@ enum Protocol
             ClassMethod::BASIC_ACK => Frame\BasicAck::class,
             ClassMethod::BASIC_NACK => Frame\BasicNack::class,
             ClassMethod::BASIC_REJECT => Frame\BasicReject::class,
+            ClassMethod::BASIC_RETURN => Frame\BasicReturn::class,
         ],
     ];
 

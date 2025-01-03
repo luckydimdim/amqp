@@ -2,18 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Typhoon\Amqp091\Internal;
+namespace Typhoon\Amqp091\Internal\Delivery;
 
 use Typhoon\Amqp091\Channel;
 use Typhoon\Amqp091\Delivery;
+use Typhoon\Amqp091\Internal\Hooks;
 use Typhoon\Amqp091\Internal\Protocol\Frame;
 
 /**
  * @internal
  * @psalm-internal Typhoon\Amqp091
- * @psalm-type Listener = callable(Delivery, Channel): void
+ * @psalm-type Listener = callable(Delivery): void
  */
-final class Consumer
+final class Receiver
 {
     private const WAIT = 0;
     private const HEADER = 1;
@@ -24,6 +25,8 @@ final class Consumer
 
     private ?Frame\BasicDeliver $delivery = null;
 
+    private ?Frame\BasicReturn $return = null;
+
     private ?Frame\ContentHeader $header = null;
 
     /** @var non-negative-int */
@@ -31,7 +34,7 @@ final class Consumer
 
     private string $message = '';
 
-    /** @var array<string, Listener> */
+    /** @var list<Listener> */
     private array $listeners = [];
 
     /**
@@ -46,6 +49,7 @@ final class Consumer
     public function run(): void
     {
         $this->subscribe(Frame\BasicDeliver::class, $this->onBasicDeliver(...));
+        $this->subscribe(Frame\BasicReturn::class, $this->onBasicReturn(...));
         $this->subscribe(Frame\ContentHeader::class, $this->onContentHeader(...));
         $this->subscribe(Frame\ContentBody::class, $this->onContentBody(...));
     }
@@ -53,23 +57,27 @@ final class Consumer
     /**
      * @param Listener $callback
      */
-    public function register(string $consumerTag, callable $callback): void
+    public function addListener(callable $callback): void
     {
-        $this->listeners[$consumerTag] = $callback;
+        $this->listeners[] = $callback;
     }
 
-    /**
-     * @param non-empty-string $consumerTag
-     */
-    public function unregister(string $consumerTag): void
+    public function stop(): void
     {
-        unset($this->listeners[$consumerTag]);
+        $this->listeners = [];
     }
 
     private function onBasicDeliver(Frame\BasicDeliver $delivery): void
     {
         if ($this->step === self::WAIT) {
             [$this->delivery, $this->step] = [$delivery, self::HEADER];
+        }
+    }
+
+    private function onBasicReturn(Frame\BasicReturn $return): void
+    {
+        if ($this->step === self::WAIT) {
+            [$this->return, $this->step] = [$return, self::HEADER];
         }
     }
 
@@ -100,7 +108,7 @@ final class Consumer
             return;
         }
 
-        \assert($this->delivery !== null, 'delivery must not be empty.');
+        \assert($this->delivery !== null || $this->return !== null, 'delivery or return must not be empty.');
         \assert($this->header !== null, 'header must not be empty.');
 
         $delivery = new Delivery(
@@ -108,11 +116,12 @@ final class Consumer
             nack: $this->channel->nack(...),
             reject: $this->channel->reject(...),
             body: $this->message,
-            exchange: $this->delivery->exchange,
-            routingKey: $this->delivery->routingKey,
+            exchange: $this->delivery?->exchange ?? $this->return?->exchange ?? '',
+            routingKey: $this->delivery?->routingKey ?? $this->return?->routingKey ?? '',
             headers: $this->header->properties->headers,
-            deliveryTag: $this->delivery->deliveryTag,
-            redelivered: $this->delivery->redelivered,
+            deliveryTag: $this->delivery?->deliveryTag ?? 0,
+            consumerTag: $this->delivery?->consumerTag ?? '',
+            redelivered: $this->delivery?->redelivered ?? false,
             contentType: $this->header->properties->contentType,
             contentEncoding: $this->header->properties->contentEncoding,
             deliveryMode: $this->header->properties->deliveryMode,
@@ -125,21 +134,22 @@ final class Consumer
             type: $this->header->properties->type,
             userId: $this->header->properties->userId,
             appId: $this->header->properties->appId,
+            returned: $this->return !== null,
         );
 
-        $listener = $this->listeners[$this->delivery->consumerTag] ?? null;
-        if ($listener !== null) {
-            $listener($delivery, $this->channel);
+        foreach ($this->listeners as $listener) {
+            $listener($delivery);
         }
 
         $this->delivery = null;
+        $this->return = null;
         $this->header = null;
         $this->message = '';
         $this->step = self::WAIT;
     }
 
     /**
-     * @template T of Protocol\Frame
+     * @template T of Frame
      * @param class-string<T> $frameType
      * @param \Closure(T): void $callback
      */

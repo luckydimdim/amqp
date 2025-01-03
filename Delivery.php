@@ -38,6 +38,7 @@ final class Delivery
         public readonly string $routingKey = '',
         public readonly array $headers = [],
         public readonly int $deliveryTag = 0,
+        public readonly string $consumerTag = '',
         public readonly bool $redelivered = false,
         public readonly ?string $contentType = null,
         public readonly ?string $contentEncoding = null,
@@ -51,6 +52,7 @@ final class Delivery
         public readonly ?string $type = null,
         public readonly ?string $userId = null,
         public readonly ?string $appId = null,
+        public readonly bool $returned = false,
     ) {
         $this->ack = $ack;
         $this->nack = $nack;
