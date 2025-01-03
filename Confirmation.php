@@ -14,7 +14,7 @@ final class Confirmation
 {
     /**
      * @param iterable<self> $confirmations
-     * @return \Traversable<non-negative-int, PublishedResult>
+     * @return \Traversable<non-negative-int, PublishResult>
      */
     public static function awaitAll(iterable $confirmations, ?Cancellation $cancellation = null): \Traversable
     {
@@ -25,7 +25,7 @@ final class Confirmation
 
     /**
      * @param iterable<self> $confirmations
-     * @return iterable<non-negative-int, Future<PublishedResult>>
+     * @return iterable<non-negative-int, Future<PublishResult>>
      */
     public static function iterate(iterable $confirmations, ?Cancellation $cancellation = null): iterable
     {
@@ -37,11 +37,11 @@ final class Confirmation
         return Future::iterate($futures, $cancellation);
     }
 
-    private PublishedResult $result;
+    private PublishResult $result;
 
     /**
      * @param non-negative-int $deliveryTag
-     * @param Future<PublishedResult> $future
+     * @param Future<PublishResult> $future
      * @param \Closure(): void $cancel
      */
     public function __construct(
@@ -49,13 +49,13 @@ final class Confirmation
         private readonly Future $future,
         private readonly \Closure $cancel,
     ) {
-        $this->result = PublishedResult::Waiting;
-        $this->future->map(function (PublishedResult $result): void {
+        $this->result = PublishResult::Waiting;
+        $this->future->map(function (PublishResult $result): void {
             $this->result = $result;
         });
     }
 
-    public function await(?Cancellation $cancellation = null): PublishedResult
+    public function await(?Cancellation $cancellation = null): PublishResult
     {
         $cancellation?->subscribe($this->cancel(...));
 
@@ -63,14 +63,14 @@ final class Confirmation
     }
 
     /**
-     * @return Future<PublishedResult>
+     * @return Future<PublishResult>
      */
     public function future(): Future
     {
         return $this->future;
     }
 
-    public function result(): PublishedResult
+    public function result(): PublishResult
     {
         return $this->result;
     }

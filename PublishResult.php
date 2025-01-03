@@ -7,7 +7,7 @@ namespace Typhoon\Amqp091;
 /**
  * @api
  */
-enum PublishedResult
+enum PublishResult
 {
     case Acked;
     case Nacked;

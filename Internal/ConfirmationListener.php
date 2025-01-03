@@ -8,7 +8,7 @@ use Amp\DeferredFuture;
 use Typhoon\Amqp091\Confirmation;
 use Typhoon\Amqp091\Internal\Protocol\Frame\BasicAck;
 use Typhoon\Amqp091\Internal\Protocol\Frame\BasicNack;
-use Typhoon\Amqp091\PublishedResult;
+use Typhoon\Amqp091\PublishResult;
 
 /**
  * @internal
@@ -22,7 +22,7 @@ final class ConfirmationListener implements \Countable
     /** @var non-negative-int */
     private int $confirmed = 0;
 
-    /** @var array<non-negative-int, DeferredFuture<PublishedResult>> */
+    /** @var array<non-negative-int, DeferredFuture<PublishResult>> */
     private array $confirms = [];
 
     /**
@@ -37,21 +37,21 @@ final class ConfirmationListener implements \Countable
     {
         [$this->deliveryTag, $this->confirmed, $this->confirms] = [0, 0, []];
 
-        $this->hooks->subscribe($this->channelId, BasicAck::class, $this->confirm(PublishedResult::Acked));
-        $this->hooks->subscribe($this->channelId, BasicNack::class, $this->confirm(PublishedResult::Nacked));
+        $this->hooks->subscribe($this->channelId, BasicAck::class, $this->confirm(PublishResult::Acked));
+        $this->hooks->subscribe($this->channelId, BasicNack::class, $this->confirm(PublishResult::Nacked));
     }
 
     public function newConfirmation(): Confirmation
     {
         $deliveryTag = ++$this->deliveryTag;
 
-        /** @var DeferredFuture<PublishedResult> $deferred */
+        /** @var DeferredFuture<PublishResult> $deferred */
         $deferred = new DeferredFuture();
         $this->confirms[$deliveryTag] = $deferred;
 
         return new Confirmation($deliveryTag, $deferred->getFuture(), function () use ($deliveryTag, $deferred): void {
             unset($this->confirms[$deliveryTag]);
-            $deferred->complete(PublishedResult::Canceled);
+            $deferred->complete(PublishResult::Canceled);
         });
     }
 
@@ -63,7 +63,7 @@ final class ConfirmationListener implements \Countable
     /**
      * @return callable(BasicAck|BasicNack): void
      */
-    private function confirm(PublishedResult $result): callable
+    private function confirm(PublishResult $result): callable
     {
         return function (BasicAck|BasicNack $frame) use ($result): void {
             if ($frame->multiple) {
@@ -79,7 +79,7 @@ final class ConfirmationListener implements \Countable
     /**
      * @param non-negative-int $deliveryTag
      */
-    private function complete(int $deliveryTag, PublishedResult $result): void
+    private function complete(int $deliveryTag, PublishResult $result): void
     {
         $confirmation = $this->confirms[$deliveryTag] ?? null;
         if ($confirmation !== null) {
