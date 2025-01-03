@@ -225,7 +225,7 @@ final class Channel
     }
 
     /**
-     * @param callable(Delivery): void $callback
+     * @param callable(Delivery, self): void $callback
      * @param array<string, mixed> $arguments
      * @return non-empty-string
      * @throws \Throwable

@@ -11,7 +11,7 @@ use Typhoon\Amqp091\Internal\Protocol\Frame;
 /**
  * @internal
  * @psalm-internal Typhoon\Amqp091
- * @psalm-type Listener = callable(Delivery): void
+ * @psalm-type Listener = callable(Delivery, Channel): void
  */
 final class Consumer
 {
@@ -127,7 +127,7 @@ final class Consumer
 
         $listener = $this->listeners[$this->delivery->consumerTag] ?? null;
         if ($listener !== null) {
-            $listener($delivery);
+            $listener($delivery, $this->channel);
         }
 
         $this->delivery = null;
