@@ -66,7 +66,9 @@ final class Hooks implements
         $this->defers[$channelId][$frameType][] =
             /** @param T $frame */
             function (Protocol\Frame $frame) use ($deferred, $channelId, $frameType, $idx): void {
-                $deferred->complete($frame);
+                if (!$deferred->isComplete()) {
+                    $deferred->complete($frame);
+                }
                 unset(
                     $this->defers[$channelId][$frameType][$idx],
                     $this->queue[$channelId][spl_object_id($deferred)],
