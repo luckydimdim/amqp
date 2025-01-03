@@ -39,4 +39,16 @@ final class ConsumerTagGenerator
 
         return "{$prefix}{$infix}{$suffix}";
     }
+
+    /**
+     * @return non-empty-string
+     */
+    public function select(string $consumerTag): string
+    {
+        if ($consumerTag === '') {
+            $consumerTag = $this->next();
+        }
+
+        return $consumerTag;
+    }
 }

@@ -64,7 +64,7 @@ final class Returns implements \IteratorAggregate
     {
         /** @var Pipeline\Queue<Delivery> $queue */
         $queue = new Pipeline\Queue();
-        /** @psalm-suppress InvalidPropertyAssignmentValue no errors here. */
+        /** @psalm-suppress InvalidPropertyAssignmentValue https://github.com/vimeo/psalm/issues/4589 */
         $this->callbacks[] = $queue->push(...);
 
         return $queue->iterate();
