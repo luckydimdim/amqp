@@ -243,9 +243,7 @@ final class Channel
         bool $noWait = false,
         array $arguments = [],
     ): string {
-        if ($consumerTag === '') {
-            $consumerTag = $this->consumerTags->next();
-        }
+        $consumerTag = $this->consumerTags->select($consumerTag);
 
         $this->connection->writeFrame(Protocol\Method::basicConsume(
             channelId: $this->channelId,
@@ -265,6 +263,39 @@ final class Channel
         $this->consumer->register($consumerTag, $callback);
 
         return $consumerTag;
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @param non-negative-int $size should be equal to prefetch count on qos method
+     * @throws \Throwable
+     */
+    public function iterator(
+        string $queue = '',
+        string $consumerTag = '',
+        int $size = 0,
+        bool $noLocal = false,
+        bool $noAck = false,
+        bool $exclusive = false,
+        bool $noWait = false,
+        array $arguments = [],
+    ): Iterator {
+        $consumerTag = $this->consumerTags->select($consumerTag);
+
+        $iterator = Iterator::buffered($consumerTag, $this, $size);
+
+        $this->consume(
+            callback: $iterator->push(...),
+            queue: $queue,
+            consumerTag: $consumerTag,
+            noLocal: $noLocal,
+            noAck: $noAck,
+            exclusive: $exclusive,
+            noWait: $noWait,
+            arguments: $arguments,
+        );
+
+        return $iterator;
     }
 
     /**
