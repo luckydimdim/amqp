@@ -8,6 +8,7 @@ use Amp\Cancellation;
 use Amp\Future;
 use Amp\NullCancellation;
 use Typhoon\Amqp091\Internal\ChannelMode;
+use Typhoon\Amqp091\Internal\ConfirmationListener;
 use Typhoon\Amqp091\Internal\Consumer;
 use Typhoon\Amqp091\Internal\ConsumerTagGenerator;
 use Typhoon\Amqp091\Internal\Hooks;
@@ -26,10 +27,9 @@ final class Channel
 
     private readonly ConsumerTagGenerator $consumerTags;
 
-    private ChannelMode $mode = ChannelMode::regular;
+    private readonly ConfirmationListener $confirms;
 
-    /** @var non-negative-int */
-    private int $deliveryTag = 0;
+    private ChannelMode $mode = ChannelMode::regular;
 
     private bool $isClosed = false;
 
@@ -43,6 +43,10 @@ final class Channel
         private readonly Hooks $hooks,
     ) {
         $this->consumerTags = new ConsumerTagGenerator();
+        $this->confirms = new ConfirmationListener(
+            $this->hooks,
+            $this->channelId,
+        );
         $this->consumer = new Consumer(
             $this,
             $this->hooks,
@@ -53,7 +57,6 @@ final class Channel
     }
 
     /**
-     * @return ?non-negative-int
      * @throws \Throwable
      */
     public function publish(
@@ -62,7 +65,7 @@ final class Channel
         string $routingKey = '',
         bool $mandatory = false,
         bool $immediate = false,
-    ): ?int {
+    ): ?Confirmation {
         $this->connection->writeFrame((function () use ($message, $exchange, $routingKey, $mandatory, $immediate): \Generator {
             yield Protocol\Method::basicPublish(
                 channelId: $this->channelId,
@@ -86,7 +89,7 @@ final class Channel
             }
         })());
 
-        return $this->mode === ChannelMode::confirm ? ++$this->deliveryTag : null;
+        return $this->mode === ChannelMode::confirm ? $this->confirms->newConfirmation() : null;
     }
 
     /**
@@ -583,6 +586,7 @@ final class Channel
         }
 
         $this->mode = ChannelMode::confirm;
+        $this->confirms->listen();
     }
 
     /**

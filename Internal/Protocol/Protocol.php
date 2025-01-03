@@ -62,6 +62,9 @@ enum Protocol
             ClassMethod::BASIC_CONSUME_OK => Frame\BasicConsumeOk::class,
             ClassMethod::BASIC_DELIVER => Frame\BasicDeliver::class,
             ClassMethod::BASIC_CANCEL_OK => Frame\BasicCancelOk::class,
+            ClassMethod::BASIC_ACK => Frame\BasicAck::class,
+            ClassMethod::BASIC_NACK => Frame\BasicNack::class,
+            ClassMethod::BASIC_REJECT => Frame\BasicReject::class,
         ],
     ];
 
