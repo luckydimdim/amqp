@@ -108,6 +108,8 @@ final class Consumer
             nack: $this->channel->nack(...),
             reject: $this->channel->reject(...),
             body: $this->message,
+            exchange: $this->delivery->exchange,
+            routingKey: $this->delivery->routingKey,
             headers: $this->header->properties->headers,
             deliveryTag: $this->delivery->deliveryTag,
             redelivered: $this->delivery->redelivered,

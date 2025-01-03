@@ -134,6 +134,8 @@ final class Channel
                 nack: $this->nack(...),
                 reject: $this->reject(...),
                 body: $content,
+                exchange: $frame->exchange,
+                routingKey: $frame->routingKey,
                 headers: $header->properties->headers,
                 deliveryTag: $frame->deliveryTag,
                 redelivered: $frame->redelivered,

@@ -34,6 +34,8 @@ final class Delivery
         callable $nack,
         callable $reject,
         public readonly string $body = '',
+        public readonly string $exchange = '',
+        public readonly string $routingKey = '',
         public readonly array $headers = [],
         public readonly int $deliveryTag = 0,
         public readonly bool $redelivered = false,
