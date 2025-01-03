@@ -64,9 +64,8 @@ final class Returns implements \IteratorAggregate
     {
         /** @var Pipeline\Queue<Delivery> $queue */
         $queue = new Pipeline\Queue();
-        $this->callbacks[] = static function (Delivery $delivery) use ($queue): void {
-            $queue->push($delivery);
-        };
+        /** @psalm-suppress InvalidPropertyAssignmentValue no errors here. */
+        $this->callbacks[] = $queue->push(...);
 
         return $queue->iterate();
     }

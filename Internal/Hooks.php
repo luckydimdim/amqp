@@ -110,7 +110,7 @@ final class Hooks implements
     {
         foreach ($requests as $request) {
             foreach ($this->defers[$request->channelId][$request->frame::class] ?? [] as $f) {
-                /** @psalm-suppress InvalidArgument this is ok. */
+                /** @psalm-suppress InvalidArgument no errors here. */
                 $f($request->frame);
             }
         }
