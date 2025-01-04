@@ -553,6 +553,27 @@ final class Channel
     }
 
     /**
+     * @param callable(self): void $tx
+     * @throws \Throwable
+     */
+    public function transactional(callable $tx): void
+    {
+        if (!$this->mode->transactional()) {
+            $this->txSelect();
+        }
+
+        try {
+            $tx($this);
+        } catch (\Throwable $e) {
+            $this->txRollback();
+
+            throw $e;
+        }
+
+        $this->txCommit();
+    }
+
+    /**
      * @throws \Throwable
      */
     public function txSelect(): void

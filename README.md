@@ -32,6 +32,7 @@ Pure asynchronous (fiber based) strictly typed full-featured PHP library for AMQ
   - [consume](#consume)
   - [consume iterator](#consume-iterator)
   - [tx](#tx)
+  - [transactional](#transactional)
   - [confirms](#confirms)
   - [returns](#returns)
 - [License](#license)
@@ -706,6 +707,46 @@ $client->disconnect();
 
 - you can't call `txSelect` more than once.
 - after switching to the [confirmation mode](#confirms), transactions will be unavailable.
+
+#### transactional
+
+If you prefer not to manage the transaction yourself, you can use the `Channel::transactional` method, which will put the channel into transactional mode and commit or rollback the transaction in case of an exception.
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use Typhoon\Amqp091\Channel;
+use Typhoon\Amqp091\Client;
+use Typhoon\Amqp091\Message;
+use Typhoon\Amqp091\Config;
+
+require_once __DIR__ . '/../../vendor/autoload.php';
+
+$client = new Client(Config::default());
+$client->connect();
+
+$channel = $client->channel();
+
+$channel->transactional(static function (Channel $channel): void {
+    $channel->publish(new Message('...'), routingKey: 'test');
+    $channel->publish(new Message('...'), routingKey: 'test');
+    $channel->publish(new Message('...'), routingKey: 'test');
+});
+
+try {
+    $channel->transactional(static function (Channel $channel): void {
+        $channel->publish(new Message('...'), routingKey: 'test');
+        $channel->publish(new Message('...'), routingKey: 'test');
+        throw new \DomainException('Ops.');
+    });
+} catch (\Throwable $e) {
+    var_dump($e->getMessage()); // Ops.
+}
+
+$client->disconnect();
+```
 
 #### confirms
 
