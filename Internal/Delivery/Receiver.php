@@ -111,10 +111,13 @@ final class Receiver
         \assert($this->delivery !== null || $this->return !== null, 'delivery or return must not be empty.');
         \assert($this->header !== null, 'header must not be empty.');
 
+        // You cannot call ack/nack/reject on a returned message.
+        $noAction = static function (): void {};
+
         $delivery = new Delivery(
-            ack: $this->channel->ack(...),
-            nack: $this->channel->nack(...),
-            reject: $this->channel->reject(...),
+            ack: $this->return !== null ? $noAction : $this->channel->ack(...),
+            nack: $this->return !== null ? $noAction : $this->channel->nack(...),
+            reject: $this->return !== null ? $noAction : $this->channel->reject(...),
             body: $this->message,
             exchange: $this->delivery?->exchange ?? $this->return?->exchange ?? '',
             routingKey: $this->delivery?->routingKey ?? $this->return?->routingKey ?? '',
