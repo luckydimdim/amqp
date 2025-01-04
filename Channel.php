@@ -270,7 +270,7 @@ final class Channel
      * @param non-negative-int $size should be equal to prefetch count on qos method
      * @throws \Throwable
      */
-    public function iterator(
+    public function consumeIterator(
         string $queue = '',
         string $consumerTag = '',
         int $size = 0,
