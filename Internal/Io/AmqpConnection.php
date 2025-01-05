@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Typhoon\Amqp091\Internal\Io;
 
 use Amp;
-use Amp\Pipeline\ConcurrentIterator;
-use Amp\Pipeline\Queue;
 use Amp\Socket\Socket;
 use Revolt\EventLoop;
 use Typhoon\AmpBridge\AmpReaderWriter;
@@ -32,6 +30,7 @@ final class AmqpConnection implements Writer
 
     private float $lastWrite = 0;
 
+    /** @psalm-suppress UnusedProperty it is used by reference. */
     private bool $isClosed = false;
 
     public function __construct(Socket $socket, Hooks $hooks)
@@ -39,11 +38,34 @@ final class AmqpConnection implements Writer
         $this->socket = $socket;
         $this->buffer = Buffer::empty();
 
-        /** @var Queue<Protocol\Request> $queue */
-        $queue = new Queue();
+        $isClosed = &$this->isClosed;
 
-        $this->parseRequests($queue);
-        $this->dispatchRequests($queue->iterate(), $hooks);
+        EventLoop::queue(static function () use ($socket, &$isClosed, $hooks): void {
+            $reader = new Protocol\Reader(
+                new ReaderWriter(
+                    new BufferedReaderWriter(
+                        new AmpReaderWriter($socket),
+                    ),
+                ),
+            );
+
+            try {
+                while (($request = $reader->read()) !== null) {
+                    $hooks->emit($request);
+                }
+            } catch (\Throwable $e) {
+                $e = match (true) {
+                    $e instanceof ReaderIsClosed => new ConnectionIsClosed(),
+                    default => $e,
+                };
+
+                if (!$isClosed) {
+                    $hooks->error($e);
+                }
+            }
+
+            $hooks->complete();
+        });
     }
 
     /**
@@ -94,61 +116,5 @@ final class AmqpConnection implements Writer
         }
 
         $this->isClosed = true;
-    }
-
-    /**
-     * @param Queue<Protocol\Request> $queue
-     */
-    private function parseRequests(Queue $queue): void
-    {
-        $socket = &$this->socket;
-        $isClosed = &$this->isClosed;
-
-        EventLoop::queue(static function () use (&$socket, &$isClosed, $queue): void {
-            $reader = new Protocol\Reader(
-                new ReaderWriter(
-                    new BufferedReaderWriter(
-                        new AmpReaderWriter($socket),
-                    ),
-                ),
-            );
-
-            try {
-                while (($request = $reader->read()) !== null) {
-                    $queue
-                        ->pushAsync($request)
-                        ->await();
-                }
-            } catch (\Throwable $e) {
-                $e = match (true) {
-                    $e instanceof ReaderIsClosed => new ConnectionIsClosed(),
-                    default => $e,
-                };
-
-                if (!$isClosed) {
-                    $queue->error($e);
-                }
-            }
-
-            if (!$queue->isComplete()) {
-                $queue->complete();
-            }
-        });
-    }
-
-    /**
-     * @param ConcurrentIterator<Protocol\Request> $iterator
-     */
-    private function dispatchRequests(ConcurrentIterator $iterator, Hooks $hooks): void
-    {
-        $isClosed = &$this->isClosed;
-
-        EventLoop::queue(static function () use (&$isClosed, $iterator, $hooks): void {
-            while (!$isClosed) {
-                if ($iterator->continue()) {
-                    $hooks->emit($iterator->getValue());
-                }
-            }
-        });
     }
 }

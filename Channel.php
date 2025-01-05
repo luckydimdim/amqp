@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Typhoon\Amqp091;
 
 use Amp\Cancellation;
-use Amp\Future;
 use Amp\NullCancellation;
 use Typhoon\Amqp091\Internal\ChannelMode;
 use Typhoon\Amqp091\Internal\ConfirmationListener;
 use Typhoon\Amqp091\Internal\Delivery\Consumer;
 use Typhoon\Amqp091\Internal\Delivery\ConsumerTagGenerator;
+use Typhoon\Amqp091\Internal\Delivery\DeliverySupervisor;
 use Typhoon\Amqp091\Internal\Delivery\Receiver;
 use Typhoon\Amqp091\Internal\Hooks;
 use Typhoon\Amqp091\Internal\Io\AmqpConnection;
@@ -24,11 +24,13 @@ use Typhoon\Amqp091\Internal\Protocol\Frame;
  */
 final class Channel
 {
-    public readonly Returns $returns;
+    private readonly DeliverySupervisor $supervisor;
+
+    private readonly Consumer $consumer;
 
     private readonly Receiver $receiver;
 
-    private readonly Consumer $consumer;
+    public readonly Returns $returns;
 
     private readonly ConsumerTagGenerator $consumerTags;
 
@@ -47,14 +49,14 @@ final class Channel
         private readonly Properties $properties,
         private readonly Hooks $hooks,
     ) {
-        $this->receiver = new Receiver($this, $this->hooks, $this->channelId);
+        $this->supervisor = new DeliverySupervisor($this, $this->hooks, $this->channelId);
         $this->consumerTags = new ConsumerTagGenerator();
-        $this->consumer = new Consumer($this->receiver, $this);
+        $this->consumer = Consumer::create($this->supervisor, $this);
+        $this->receiver = Receiver::create($this->supervisor);
+        $this->returns = Returns::create($this->supervisor);
         $this->confirms = new ConfirmationListener($this->hooks, $this->channelId);
-        $this->returns = Returns::fromReceiver($this->receiver);
 
-        $this->receiver->run();
-        $this->consumer->run();
+        $this->supervisor->run();
     }
 
     /**
@@ -111,51 +113,7 @@ final class Channel
             noAck: $noAck,
         ));
 
-        $frame = Future\awaitFirst([
-            $this->hooks->oneshot($this->channelId, Frame\BasicGetOk::class),
-            $this->hooks->oneshot($this->channelId, Frame\BasicGetEmpty::class),
-        ]);
-
-        /** @var ?Delivery $delivery */
-        $delivery = null;
-
-        if ($frame instanceof Frame\BasicGetOk) {
-            $header = $this->await(Frame\ContentHeader::class);
-            $n = $header->bodySize;
-            $content = '';
-
-            while ($n > 0) {
-                $contentBody = $this->await(Frame\ContentBody::class);
-                $content .= $contentBody->body;
-                $n -= \strlen($contentBody->body);
-            }
-
-            $delivery = new Delivery(
-                ack: $this->ack(...),
-                nack: $this->nack(...),
-                reject: $this->reject(...),
-                body: $content,
-                exchange: $frame->exchange,
-                routingKey: $frame->routingKey,
-                headers: $header->properties->headers,
-                deliveryTag: $frame->deliveryTag,
-                redelivered: $frame->redelivered,
-                contentType: $header->properties->contentType,
-                contentEncoding: $header->properties->contentEncoding,
-                deliveryMode: $header->properties->deliveryMode,
-                priority: $header->properties->priority,
-                correlationId: $header->properties->correlationId,
-                replyTo: $header->properties->replyTo,
-                expiration: $header->properties->expiration,
-                messageId: $header->properties->messageId,
-                timestamp: $header->properties->timestamp,
-                type: $header->properties->type,
-                userId: $header->properties->userId,
-                appId: $header->properties->appId,
-            );
-        }
-
-        $permit = true;
+        [$delivery, $permit] = [$this->receiver->receive(), true];
 
         return $delivery;
     }
@@ -245,6 +203,8 @@ final class Channel
     ): string {
         $consumerTag = $this->consumerTags->select($consumerTag);
 
+        $this->consumer->register($consumerTag, $callback);
+
         $this->connection->writeFrame(Protocol\Method::basicConsume(
             channelId: $this->channelId,
             queue: $queue,
@@ -259,8 +219,6 @@ final class Channel
         if (!$noWait) {
             $this->await(Frame\BasicConsumeOk::class);
         }
-
-        $this->consumer->register($consumerTag, $callback);
 
         return $consumerTag;
     }
@@ -655,7 +613,7 @@ final class Channel
 
             $this->await(Frame\ChannelCloseOk::class);
 
-            $this->receiver->stop();
+            $this->supervisor->stop();
             $this->isClosed = true;
         }
     }

@@ -14,24 +14,12 @@ use Typhoon\Amqp091\Delivery;
  */
 final class Consumer
 {
-    /** @var array<string, Listener> */
-    private array $consumers = [];
-
-    public function __construct(
-        private readonly Receiver $receiver,
-        private readonly Channel $channel,
-    ) {}
-
-    public function run(): void
+    public static function create(DeliverySupervisor $supervisor, Channel $channel): self
     {
-        $this->receiver->addListener(function (Delivery $delivery): void {
-            if (!$delivery->returned) {
-                $consumer = $this->consumers[$delivery->consumerTag] ?? null;
-                if ($consumer !== null) {
-                    $consumer($delivery, $this->channel);
-                }
-            }
-        });
+        $consumer = new self($supervisor, $channel);
+        $consumer->run();
+
+        return $consumer;
     }
 
     /**
@@ -48,5 +36,23 @@ final class Consumer
     public function unregister(string $consumerTag): void
     {
         unset($this->consumers[$consumerTag]);
+    }
+
+    /** @var array<string, Listener> */
+    private array $consumers = [];
+
+    private function __construct(
+        private readonly DeliverySupervisor $supervisor,
+        private readonly Channel $channel,
+    ) {}
+
+    private function run(): void
+    {
+        $this->supervisor->addConsumeListener(function (Delivery $delivery): void {
+            $consumer = $this->consumers[$delivery->consumerTag] ?? null;
+            if ($consumer !== null) {
+                $consumer($delivery, $this->channel);
+            }
+        });
     }
 }

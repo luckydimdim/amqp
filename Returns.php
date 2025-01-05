@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Typhoon\Amqp091;
 
 use Amp\Pipeline;
-use Typhoon\Amqp091\Internal\Delivery\Receiver;
+use Typhoon\Amqp091\Internal\Delivery\DeliverySupervisor;
 
 /**
  * @api
@@ -13,23 +13,13 @@ use Typhoon\Amqp091\Internal\Delivery\Receiver;
  */
 final class Returns implements \IteratorAggregate
 {
-    public static function fromReceiver(Receiver $receiver): self
+    public static function create(DeliverySupervisor $supervisor): self
     {
-        $returns = new self($receiver);
+        $returns = new self($supervisor);
         $returns->run();
 
         return $returns;
     }
-
-    /** @var list<\Closure(Delivery): void> */
-    private array $callbacks = [];
-
-    /** @var ?Pipeline\ConcurrentIterator<Delivery> */
-    private ?Pipeline\ConcurrentIterator $iterator = null;
-
-    private function __construct(
-        private readonly Receiver $receiver,
-    ) {}
 
     /**
      * @param \Closure(Delivery): void $map
@@ -46,14 +36,29 @@ final class Returns implements \IteratorAggregate
         return ($this->iterator ??= $this->createIterator())->getIterator();
     }
 
+    /** @var list<\Closure(Delivery): void> */
+    private array $callbacks = [];
+
+    /** @var ?Pipeline\ConcurrentIterator<Delivery> */
+    private ?Pipeline\ConcurrentIterator $iterator = null;
+
+    /** @var ?Pipeline\Queue<Delivery> */
+    private ?Pipeline\Queue $queue = null;
+
+    private function __construct(
+        private readonly DeliverySupervisor $supervisor,
+    ) {}
+
     private function run(): void
     {
-        $this->receiver->addListener(function (Delivery $delivery): void {
-            if ($delivery->returned) {
-                foreach ($this->callbacks as $callback) {
-                    $callback($delivery);
-                }
+        $this->supervisor->addReturnListener(function (Delivery $delivery): void {
+            foreach ($this->callbacks as $callback) {
+                $callback($delivery);
             }
+        });
+
+        $this->supervisor->addShutdownListener(function (): void {
+            $this->queue?->complete();
         });
     }
 
@@ -66,6 +71,7 @@ final class Returns implements \IteratorAggregate
         $queue = new Pipeline\Queue();
         /** @psalm-suppress InvalidPropertyAssignmentValue https://github.com/vimeo/psalm/issues/4589 */
         $this->callbacks[] = $queue->push(...);
+        $this->queue = $queue;
 
         return $queue->iterate();
     }
