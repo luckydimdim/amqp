@@ -149,7 +149,7 @@ final class MessageProperties
         }
 
         if (\count($this->headers) > 0) {
-            $buffer = Io\Buffer::alloc();
+            $buffer = Io\Buffer::empty();
             $buffer->writeTable($this->headers);
 
             $size += \count($buffer);

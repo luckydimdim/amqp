@@ -37,7 +37,7 @@ final class AmqpConnection implements Writer
     public function __construct(Socket $socket, Hooks $hooks)
     {
         $this->socket = $socket;
-        $this->buffer = Buffer::alloc();
+        $this->buffer = Buffer::empty();
 
         /** @var Queue<Protocol\Request> $queue */
         $queue = new Queue();

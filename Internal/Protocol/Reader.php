@@ -24,7 +24,7 @@ final class Reader
     public function __construct(ReadFrom $reader)
     {
         $this->reader = $reader;
-        $this->buffer = Io\Buffer::alloc();
+        $this->buffer = Io\Buffer::empty();
     }
 
     /**
@@ -32,17 +32,13 @@ final class Reader
      */
     public function read(): Request
     {
-        $this->buffer
-            ->write($this->reader->read(self::HEADER_SIZE))
-            ->rewind();
+        $this->buffer->write($this->reader->read(self::HEADER_SIZE));
 
         $type = FrameType::from($this->buffer->readUint8());
         $channelId = $this->buffer->readUint16();
 
         if (($size = $this->buffer->readUint32()) > 0) {
-            $this->buffer
-                ->write($this->reader->read($size))
-                ->rewind();
+            $this->buffer->write($this->reader->read($size));
         }
 
         $frame = match ($type) {

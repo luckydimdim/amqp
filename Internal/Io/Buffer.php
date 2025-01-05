@@ -19,33 +19,9 @@ final class Buffer implements
     WriterTo,
     \Countable
 {
-    private const DEFAULT_BUFFER_SIZE = 4096;
-
     private string $buffer;
 
-    /** @var non-negative-int */
-    private int $writeCursor = 0;
-
-    /** @var non-negative-int */
-    private int $readCursor = 0;
-
-    /** @var non-negative-int */
-    private int $len;
-
-    /** @var non-negative-int */
-    private int $allocSize;
-
     private readonly endian $endian;
-
-    /**
-     * @param non-negative-int $size
-     */
-    public static function alloc(
-        int $size = self::DEFAULT_BUFFER_SIZE,
-        endian $endian = endian::network,
-    ): self {
-        return new self(str_repeat("\0", $size), $endian);
-    }
 
     public static function empty(endian $endian = endian::network): self
     {
@@ -56,8 +32,6 @@ final class Buffer implements
     {
         $this->endian = $endian;
         $this->buffer = $buffer;
-        $this->len = \strlen($buffer);
-        $this->allocSize = $this->len ?: self::DEFAULT_BUFFER_SIZE;
     }
 
     public function writeUint8(int $v): self
@@ -279,10 +253,10 @@ final class Buffer implements
 
     public function readArray(): array
     {
-        $cursor = $this->readCursor + $this->readUint32();
+        $expects = \strlen($this->buffer) - $this->readUint32();
         $values = [];
 
-        while ($cursor > $this->readCursor) {
+        while ($expects < \strlen($this->buffer)) {
             $values[] = $this->readValue();
         }
 
@@ -291,10 +265,10 @@ final class Buffer implements
 
     public function readTable(): array
     {
-        $cursor = $this->readCursor + $this->readUint32();
+        $expects = \strlen($this->buffer) - $this->readUint32();
         $table = [];
 
-        while ($cursor > $this->readCursor) {
+        while ($expects < \strlen($this->buffer)) {
             $table[$this->readString()] = $this->readValue();
         }
 
@@ -345,18 +319,18 @@ final class Buffer implements
 
     public function reset(): string
     {
-        [$v, $this->writeCursor, $this->readCursor] = [substr($this->buffer, 0, $this->writeCursor), 0, 0];
+        [$v, $this->buffer] = [$this->buffer, ''];
 
         return $v;
     }
 
     public function reserve(callable $reserve, callable $write): self
     {
-        $pos = $this->writeCursor;
-        $this->writeCursor += $idle = \strlen($reserve(0));
+        $pos = \strlen($this->buffer);
+        $this->append($idle = $reserve(0));
         $write($this);
 
-        $len = $this->writeCursor - $pos - $idle;
+        $len = \strlen($this->buffer) - $pos - \strlen($idle);
         \assert($len >= 0);
         $v = $reserve($len);
 
@@ -369,29 +343,12 @@ final class Buffer implements
 
     public function count(): int
     {
-        return $this->writeCursor;
-    }
-
-    public function rewind(): self
-    {
-        $this->readCursor = 0;
-
-        return $this;
+        return \strlen($this->buffer);
     }
 
     private function append(string $v): self
     {
-        $valueLen = \strlen($v);
-
-        if ($this->len < ($this->writeCursor + $valueLen)) {
-            $allocSize = max($this->allocSize, $valueLen);
-            $this->buffer .= str_repeat("\0", $allocSize);
-            $this->len += $allocSize;
-        }
-
-        for ($i = 0; $i < \strlen($v); ++$i) {
-            $this->buffer[$this->writeCursor++] = $v[$i];
-        }
+        $this->buffer .= $v;
 
         return $this;
     }
@@ -402,14 +359,13 @@ final class Buffer implements
      */
     private function consume(int $n): string
     {
-        if (($this->readCursor + $n) > $this->len) {
+        if (\strlen($this->buffer) < $n) {
             throw new \RuntimeException('Buffer is empty.');
         }
 
         /** @var non-empty-string $v */
-        $v = substr($this->buffer, $this->readCursor, $n);
-        $this->readCursor += $n;
-        $this->writeCursor = max($this->writeCursor - $n, 0);
+        $v = substr($this->buffer, 0, $n);
+        $this->buffer = substr($this->buffer, $n);
 
         return $v;
     }
