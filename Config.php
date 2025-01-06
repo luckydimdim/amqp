@@ -228,6 +228,39 @@ final class Config
     }
 
     /**
+     * @return non-negative-int
+     */
+    public function heartbeat(int $suggestHeartbeat): int
+    {
+        $heartbeat = min($this->heartbeat, $suggestHeartbeat);
+        \assert($heartbeat >= 0, 'heartbeat must not be negative.');
+
+        return $heartbeat;
+    }
+
+    /**
+     * @return non-negative-int
+     */
+    public function channelMax(int $suggestChannelMax): int
+    {
+        $channelMax = min($this->channelMax, $suggestChannelMax);
+        \assert($channelMax >= 0, 'channel max must not be negative.');
+
+        return $channelMax;
+    }
+
+    /**
+     * @return positive-int
+     */
+    public function frameMax(int $suggestFrameMax): int
+    {
+        $frameMax = min($this->frameMax, $suggestFrameMax);
+        \assert($frameMax > 0, 'frame max must be positive.');
+
+        return $frameMax;
+    }
+
+    /**
      * @return non-empty-string
      */
     public function connectionDsn(): string

@@ -43,7 +43,7 @@ final class Client
      * @throws CancelledException
      * @throws \Throwable
      */
-    public function connect(Cancellation $cancellation = new NullCancellation()): void
+    public function connect(): void
     {
         if ($this->connection !== null) {
             return;
@@ -58,20 +58,40 @@ final class Client
 
         $this->connection = new AmqpConnection(
             Socket\connect($this->config->connectionDsn(), $context),
-            $this->hooks,
         );
 
-        $this->connection->writeFrame(Frame\ProtocolHeader::frame);
+        $start = $this->connection->rpc(Frame\ProtocolHeader::frame, Frame\ConnectionStart::class);
 
-        $this->connectionStart(
-            $this->await(Frame\ConnectionStart::class, cancellation: $cancellation),
+        $tune = $this->connection->rpc(
+            Protocol\Method::connectionStartOk($this->properties->toArray(), Auth\Mechanism::select(
+                $this->config->sasl(),
+                $start->mechanisms,
+            )),
+            Frame\ConnectionTune::class,
         );
 
-        $this->connectionTune(
-            $this->await(Frame\ConnectionTune::class, cancellation: $cancellation),
+        [$heartbeat, $channelMax, $frameMax] = [
+            $this->config->heartbeat($tune->heartbeat),
+            $this->config->channelMax($tune->channelMax),
+            $this->config->frameMax($tune->frameMax),
+        ];
+
+        $this->connection->rpc(
+            Protocol\Method::connectionTuneOk($channelMax, $frameMax, $heartbeat),
         );
 
-        $this->connectionOpen($cancellation);
+        $this->properties->tune($channelMax, $frameMax);
+
+        if ($heartbeat > 0) {
+            $this->connection->heartbeat($heartbeat);
+        }
+
+        $this->connection->rpc(
+            Protocol\Method::connectionOpen($this->config->vhost),
+            Frame\ConnectionOpenOk::class,
+        );
+
+        $this->connection->ioLoop($this->hooks);
 
         $this->hooks->oneshot(0, Frame\ConnectionClose::class)->map(function (Frame\ConnectionClose $close): void {
             $this->connection()->writeFrame(Protocol\Method::connectionCloseOk());
@@ -117,54 +137,6 @@ final class Client
             $this->properties,
             $this->hooks,
         );
-    }
-
-    /**
-     * @throws \Throwable
-     */
-    private function connectionStart(Frame\ConnectionStart $start): void
-    {
-        $this->connection()->writeFrame(
-            Protocol\Method::connectionStartOk($this->properties->toArray(), Auth\Mechanism::select(
-                $this->config->sasl(),
-                $start->mechanisms,
-            )),
-        );
-    }
-
-    /**
-     * @throws \Throwable
-     */
-    private function connectionTune(Frame\ConnectionTune $tune): void
-    {
-        $heartbeat = min($this->config->heartbeat, $tune->heartbeat);
-        \assert($heartbeat >= 0, 'heartbeat must not be negative.');
-
-        $maxChannel = min($this->config->channelMax, $tune->channelMax);
-        \assert($maxChannel >= 0, 'max channel must not be negative.');
-
-        $maxFrame = min($this->config->frameMax, $tune->frameMax);
-        \assert($maxFrame > 0, 'max frame must not be negative.');
-
-        $this->connection()->writeFrame(
-            Protocol\Method::connectionTuneOk($maxChannel, $maxFrame, $heartbeat),
-        );
-
-        $this->properties->tune($maxChannel, $maxFrame);
-
-        if ($heartbeat > 0) {
-            $this->connection()->heartbeat($heartbeat);
-        }
-    }
-
-    /**
-     * @throws \Throwable
-     */
-    private function connectionOpen(Cancellation $cancellation): void
-    {
-        $this->connection()->writeFrame(Protocol\Method::connectionOpen($this->config->vhost));
-
-        $this->await(Frame\ConnectionOpenOk::class, cancellation: $cancellation);
     }
 
     /**

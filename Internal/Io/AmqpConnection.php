@@ -9,6 +9,7 @@ use Amp\Socket\Socket;
 use Revolt\EventLoop;
 use Typhoon\AmpBridge\AmpReaderWriter;
 use Typhoon\Amqp091\Exception\ConnectionIsClosed;
+use Typhoon\Amqp091\Exception\UnexpectedFrameReceived;
 use Typhoon\Amqp091\Internal\Hooks;
 use Typhoon\Amqp091\Internal\Protocol;
 use Typhoon\ByteBuffer\BufferedReaderWriter;
@@ -24,48 +25,51 @@ final class AmqpConnection implements Writer
 {
     private readonly Socket $socket;
 
+    private readonly Protocol\Reader $reader;
+
     private readonly Buffer $buffer;
 
     private ?string $heartbeatId = null;
 
     private float $lastWrite = 0;
 
-    /** @psalm-suppress UnusedProperty it is used by reference. */
     private bool $isClosed = false;
 
-    public function __construct(Socket $socket, Hooks $hooks)
+    public function __construct(Socket $socket)
     {
-        $this->socket = $socket;
         $this->buffer = Buffer::empty();
-
-        $isClosed = &$this->isClosed;
-
-        EventLoop::queue(static function () use ($socket, &$isClosed, $hooks): void {
-            $reader = new Protocol\Reader(
-                new ReaderWriter(
-                    new BufferedReaderWriter(
-                        new AmpReaderWriter($socket),
-                    ),
+        $this->socket = $socket;
+        $this->reader = new Protocol\Reader(
+            new ReaderWriter(
+                new BufferedReaderWriter(
+                    new AmpReaderWriter($socket),
                 ),
-            );
+            ),
+        );
+    }
 
-            try {
-                while (($request = $reader->read()) !== null) {
-                    $hooks->emit($request);
-                }
-            } catch (\Throwable $e) {
-                $e = match (true) {
-                    $e instanceof ReaderIsClosed => new ConnectionIsClosed(),
-                    default => $e,
-                };
+    /**
+     * @template T of Protocol\Frame
+     * @param ?class-string<T> $expects
+     * @return (T is null ? null : T)
+     * @throws \Throwable
+     */
+    public function rpc(Protocol\Frame $frame, ?string $expects = null): ?Protocol\Frame
+    {
+        $frame->write($this->buffer);
+        $this->buffer->writeTo($this);
 
-                if (!$isClosed) {
-                    $hooks->error($e);
-                }
-            }
+        if ($expects === null) {
+            return null;
+        }
 
-            $hooks->complete();
-        });
+        $response = $this->reader->read();
+
+        if ($response->frame instanceof $expects) {
+            return $response->frame;
+        }
+
+        throw UnexpectedFrameReceived::forFrame($expects, $response->frame::class);
     }
 
     /**
@@ -89,6 +93,31 @@ final class AmqpConnection implements Writer
     {
         $this->socket->write($bytes);
         $this->lastWrite = Amp\now();
+    }
+
+    public function ioLoop(Hooks $hooks): void
+    {
+        $reader = &$this->reader;
+        $isClosed = &$this->isClosed;
+
+        EventLoop::queue(static function () use (&$reader, &$isClosed, $hooks): void {
+            try {
+                while ($request = $reader->read()) {
+                    $hooks->emit($request);
+                }
+            } catch (\Throwable $e) {
+                $e = match (true) {
+                    $e instanceof ReaderIsClosed => new ConnectionIsClosed(),
+                    default => $e,
+                };
+
+                if (!$isClosed) {
+                    $hooks->error($e);
+                }
+            }
+
+            $hooks->complete();
+        });
     }
 
     /**
