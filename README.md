@@ -5,7 +5,6 @@ Pure asynchronous (fiber based) strictly typed full-featured PHP library for AMQ
 ## Contents
 - [Installation](#installation)
 - [Configuration](#configuration)
-  - [default](#default) 
   - [vhost](#vhost) 
   - [auth_mechanism](#auth_mechanism)
   - [heartbeat](#heartbeat)
@@ -45,7 +44,7 @@ composer require thesis/amqp
 
 ### Configuration
 
-Configuration can be created from dsn, that follows [amqp uri spec](https://www.rabbitmq.com/docs/uri-spec).
+Configuration can be created from dsn, that follows the [amqp uri spec](https://www.rabbitmq.com/docs/uri-spec).
 
 ```php
 <?php
@@ -57,7 +56,41 @@ use Typhoon\Amqp091\Config;
 $config = Config::fromURI('amqp://guest:guest@localhost:5672/');
 ```
 
-#### default
+From array (for example, if you keep the configuration of your application as an array).
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use Typhoon\Amqp091\Config;
+
+$config = Config::fromArray([
+    'scheme' => 'amqp',
+    'host' => 'localhost',
+    'port' => 5672,
+    'user' => 'guest',
+    'password' => 'guest',
+]);
+```
+
+From primary constructor.
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use Typhoon\Amqp091\Config;
+
+$config = new Config(
+    host: 'localhost',
+    port: 5672,
+    user: 'guest',
+    vhost: '/test',
+    authMechanisms: ['plain', 'amqplain'],
+);
+```
 
 If the original amqp server settings remain unchanged, you can use `Config::default()`.
 

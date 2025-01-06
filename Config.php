@@ -9,6 +9,7 @@ use Typhoon\Amqp091\Internal\Protocol\Auth\Mechanism;
 
 /**
  * @api
+ * @psalm-import-type AmqpScheme from Scheme
  */
 final class Config
 {
@@ -21,6 +22,45 @@ final class Config
     private const DEFAULT_HEARTBEAT_INTERVAL = 60;
     private const MAX_CHANNEL = 0xFFFF;
     private const MAX_FRAME = 0xFFFF;
+
+    /** @var non-empty-list<Mechanism> */
+    private array $sasl;
+
+    /**
+     * @param non-empty-string $host
+     * @param positive-int $port
+     * @param non-empty-string $vhost
+     * @param list<non-empty-string> $authMechanisms
+     * @param non-negative-int $heartbeat
+     * @param positive-int $connectionTimeout
+     * @param int<0, 65535> $channelMax
+     * @param int<0, 65535> $frameMax
+     */
+    public function __construct(
+        public readonly Scheme $scheme = Scheme::amqp,
+        public readonly string $host = self::DEFAULT_HOST,
+        public readonly int $port = self::DEFAULT_PORT,
+        public readonly string $user = self::DEFAULT_USERNAME,
+        public readonly string $password = self::DEFAULT_PASSWORD,
+        public readonly string $vhost = self::DEFAULT_VHOST,
+        public readonly ?string $certFile = null,
+        public readonly ?string $keyFile = null,
+        public readonly ?string $cacertFile = null,
+        public readonly ?string $serverName = null,
+        public readonly array $authMechanisms = [],
+        public readonly int $heartbeat = self::DEFAULT_HEARTBEAT_INTERVAL,
+        public readonly int $connectionTimeout = self::DEFAULT_CONNECTION_TIMEOUT,
+        public readonly int $channelMax = self::MAX_CHANNEL,
+        public readonly int $frameMax = self::MAX_FRAME,
+        public readonly bool $tcpNoDelay = false,
+    ) {
+        $authMechanisms = $this->authMechanisms;
+        if (\count($authMechanisms) === 0) {
+            $authMechanisms[] = Mechanism::PLAIN;
+        }
+
+        $this->sasl = array_map(fn(string $mechanism): Mechanism => Mechanism::create($mechanism, $this->user, $this->password), $authMechanisms);
+    }
 
     public static function default(): self
     {
@@ -115,9 +155,9 @@ final class Config
             $vhost = $components['path'];
         }
 
-        $username = self::DEFAULT_USERNAME;
+        $user = self::DEFAULT_USERNAME;
         if (isset($components['user']) && $components['user'] !== '') {
-            $username = $components['user'];
+            $user = $components['user'];
         }
 
         $password = self::DEFAULT_PASSWORD;
@@ -129,7 +169,7 @@ final class Config
             scheme: Scheme::tryFrom($components['scheme'] ?? Scheme::amqp->value) ?: throw UriIsInvalid::invalidScheme($components['scheme'] ?? ''),
             host: $host,
             port: $port,
-            username: $username,
+            user: $user,
             password: $password,
             vhost: $vhost,
             certFile: $certFile,
@@ -141,8 +181,49 @@ final class Config
             connectionTimeout: $connectionTimeout,
             channelMax: $channelMax,
             frameMax: $frameMax,
-            sasl: array_map(static fn(string $mechanism): Mechanism => Mechanism::create($mechanism, $username, $password), $authMechanisms),
             tcpNoDelay: $tcpNoDelay,
+        );
+    }
+
+    /**
+     * @param array{
+     *     scheme?: AmqpScheme,
+     *     host?: non-empty-string,
+     *     port?: positive-int,
+     *     user?: non-empty-string,
+     *     password?: non-empty-string,
+     *     vhost?: non-empty-string,
+     *     certfile?: non-empty-string,
+     *     keyfile?: non-empty-string,
+     *     cacertfile?: non-empty-string,
+     *     server_name?: ?non-empty-string,
+     *     auth_mechanisms?: list<non-empty-string>,
+     *     heartbeat?: non-negative-int,
+     *     connection_timeout?: positive-int,
+     *     channel_max?: int<0, 65535>,
+     *     frame_max?: int<0, 65535>,
+     *     tcp_nodelay?: bool,
+     * } $options
+     */
+    public static function fromArray(array $options): self
+    {
+        return new self(
+            scheme: isset($options['scheme']) ? Scheme::parse($options['scheme']) : Scheme::amqp,
+            host: $options['host'] ?? self::DEFAULT_HOST,
+            port: $options['port'] ?? self::DEFAULT_PORT,
+            user: $options['user'] ?? self::DEFAULT_USERNAME,
+            password: $options['password'] ?? self::DEFAULT_PASSWORD,
+            vhost: $options['vhost'] ?? self::DEFAULT_VHOST,
+            certFile: $options['certfile'] ?? null,
+            keyFile: $options['keyfile'] ?? null,
+            cacertFile: $options['cacertfile'] ?? null,
+            serverName: $options['server_name'] ?? null,
+            authMechanisms: $options['auth_mechanisms'] ?? [],
+            heartbeat: $options['heartbeat'] ?? self::DEFAULT_HEARTBEAT_INTERVAL,
+            connectionTimeout: $options['connection_timeout'] ?? self::DEFAULT_CONNECTION_TIMEOUT,
+            channelMax: $options['channel_max'] ?? self::MAX_CHANNEL,
+            frameMax: $options['frame_max'] ?? self::MAX_FRAME,
+            tcpNoDelay: $options['tcp_nodelay'] ?? false,
         );
     }
 
@@ -155,33 +236,10 @@ final class Config
     }
 
     /**
-     * @param non-empty-string $host
-     * @param positive-int $port
-     * @param non-empty-string $vhost
-     * @param list<non-empty-string> $authMechanisms
-     * @param non-negative-int $heartbeat
-     * @param positive-int $connectionTimeout
-     * @param int<0, 65535> $channelMax
-     * @param int<0, 65535> $frameMax
-     * @param list<Mechanism> $sasl
+     * @return non-empty-list<Mechanism>
      */
-    private function __construct(
-        public readonly Scheme $scheme = Scheme::amqp,
-        public readonly string $host = self::DEFAULT_HOST,
-        public readonly int $port = self::DEFAULT_PORT,
-        public readonly string $username = self::DEFAULT_USERNAME,
-        public readonly string $password = self::DEFAULT_PASSWORD,
-        public readonly string $vhost = self::DEFAULT_VHOST,
-        public readonly ?string $certFile = null,
-        public readonly ?string $keyFile = null,
-        public readonly ?string $cacertFile = null,
-        public readonly ?string $serverName = null,
-        public readonly array $authMechanisms = [],
-        public readonly int $heartbeat = self::DEFAULT_HEARTBEAT_INTERVAL,
-        public readonly int $connectionTimeout = self::DEFAULT_CONNECTION_TIMEOUT,
-        public readonly int $channelMax = self::MAX_CHANNEL,
-        public readonly int $frameMax = self::MAX_FRAME,
-        public readonly array $sasl = [],
-        public readonly bool $tcpNoDelay = false,
-    ) {}
+    public function sasl(): array
+    {
+        return $this->sasl;
+    }
 }

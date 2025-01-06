@@ -13,8 +13,8 @@ use Typhoon\Amqp091\Internal\Io;
  */
 abstract class Mechanism
 {
-    final protected const PLAIN = 'PLAIN';
-    final protected const AMQPLAIN = 'AMQPLAIN';
+    final public const PLAIN = 'PLAIN';
+    final public const AMQPLAIN = 'AMQPLAIN';
 
     /**
      * @param non-empty-string $mechanism
@@ -29,20 +29,12 @@ abstract class Mechanism
     }
 
     /**
-     * @param list<self> $selected
+     * @param non-empty-list<self> $selected
      * @param list<string> $available
      * @throws AuthenticationMechanismIsNotSupported
      */
-    final public static function select(
-        array $selected,
-        array $available,
-        string $username,
-        string $password,
-    ): self {
-        if (\count($selected) === 0) {
-            $selected = [new Plain($username, $password)];
-        }
-
+    final public static function select(array $selected, array $available): self
+    {
         foreach ($selected as $selectedMechanism) {
             if (\in_array($selectedMechanism->name(), $available, true)) {
                 return $selectedMechanism;

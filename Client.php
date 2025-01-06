@@ -124,15 +124,11 @@ final class Client
      */
     private function connectionStart(Frame\ConnectionStart $start): void
     {
-        $auth = Auth\Mechanism::select(
-            $this->config->sasl,
-            $start->mechanisms,
-            $this->config->username,
-            $this->config->password,
-        );
-
         $this->connection()->writeFrame(
-            Protocol\Method::connectionStartOk($this->properties->toArray(), $auth),
+            Protocol\Method::connectionStartOk($this->properties->toArray(), Auth\Mechanism::select(
+                $this->config->sasl(),
+                $start->mechanisms,
+            )),
         );
     }
 
