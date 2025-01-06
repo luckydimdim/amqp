@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Typhoon\Amqp091\Internal\Protocol;
 
+use Amp\Cancellation;
 use Typhoon\Amqp091\Exception\FrameIsBroken;
 use Typhoon\Amqp091\Internal\Io;
 use Typhoon\ByteOrder\ReadFrom;
@@ -30,15 +31,15 @@ final class Reader
     /**
      * @throws \Throwable
      */
-    public function read(): Request
+    public function read(?Cancellation $cancellation = null): Request
     {
-        $this->buffer->write($this->reader->read(self::HEADER_SIZE));
+        $this->buffer->write($this->reader->read(self::HEADER_SIZE, $cancellation));
 
         $type = FrameType::from($this->buffer->readUint8());
         $channelId = $this->buffer->readUint16();
 
         if (($size = $this->buffer->readUint32()) > 0) {
-            $this->buffer->write($this->reader->read($size));
+            $this->buffer->write($this->reader->read($size, $cancellation));
         }
 
         $frame = match ($type) {
