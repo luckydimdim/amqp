@@ -211,6 +211,8 @@ use Typhoon\Amqp091\Config;
 $config = Config::fromURI('amqp://guest:guest@localhost:5672/?tcp_nodelay=true');
 ```
 
+This can **seriously increase** the speed of network packets transfer rate.
+
 ### Client
 
 The client is the connection facade to the `amqp` server. It is responsible for connecting and disconnecting (also closing all channels) from the server.

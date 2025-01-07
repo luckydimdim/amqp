@@ -108,13 +108,11 @@ final class Hooks implements
         unset($this->defers[$channelId], $this->queue[$channelId]);
     }
 
-    public function emit(Protocol\Request ...$requests): void
+    public function emit(Protocol\Request $request): void
     {
-        foreach ($requests as $request) {
-            foreach ($this->defers[$request->channelId][$request->frame::class] ?? [] as $f) {
-                /** @psalm-suppress InvalidArgument no errors here. */
-                $f($request->frame);
-            }
+        foreach ($this->defers[$request->channelId][$request->frame::class] ?? [] as $f) {
+            /** @psalm-suppress InvalidArgument no errors here. */
+            $f($request->frame);
         }
     }
 
