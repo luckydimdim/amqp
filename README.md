@@ -152,7 +152,7 @@ By default `60 seconds` will be used as RabbitMQ [suggest](https://www.rabbitmq.
 
 #### connection_timeout
 
-To configure tcp connection timeout use `connection_timeout` with value in milliseconds.
+To configure tcp connection timeout use `connection_timeout` with value in seconds.
 
 ```php
 <?php
@@ -161,7 +161,7 @@ declare(strict_types=1);
 
 use Typhoon\Amqp091\Config;
 
-$config = Config::fromURI('amqp://guest:guest@localhost:5672/?connection_timeout=2000');
+$config = Config::fromURI('amqp://guest:guest@localhost:5672/?connection_timeout=10');
 ```
 
 The default value is `1000 milliseconds`.

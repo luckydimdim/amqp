@@ -18,7 +18,7 @@ final class Config
     private const DEFAULT_USERNAME = 'guest';
     private const DEFAULT_PASSWORD = 'guest';
     private const DEFAULT_VHOST = '/';
-    private const DEFAULT_CONNECTION_TIMEOUT = 1000;
+    private const DEFAULT_CONNECTION_TIMEOUT = 10;
     private const DEFAULT_HEARTBEAT_INTERVAL = 60;
     private const MAX_CHANNEL = 0xFFFF;
     private const MAX_FRAME = 0xFFFF;
@@ -32,7 +32,7 @@ final class Config
      * @param non-empty-string $vhost
      * @param list<non-empty-string> $authMechanisms
      * @param non-negative-int $heartbeat
-     * @param positive-int $connectionTimeout
+     * @param float $connectionTimeout in seconds
      * @param int<0, 65535> $channelMax
      * @param int<0, 65535> $frameMax
      */
@@ -49,7 +49,7 @@ final class Config
         public readonly ?string $serverName = null,
         public readonly array $authMechanisms = [],
         public readonly int $heartbeat = self::DEFAULT_HEARTBEAT_INTERVAL,
-        public readonly int $connectionTimeout = self::DEFAULT_CONNECTION_TIMEOUT,
+        public readonly float $connectionTimeout = self::DEFAULT_CONNECTION_TIMEOUT,
         public readonly int $channelMax = self::MAX_CHANNEL,
         public readonly int $frameMax = self::MAX_FRAME,
         public readonly bool $tcpNoDelay = false,
