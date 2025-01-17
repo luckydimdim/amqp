@@ -2,6 +2,12 @@
 
 Pure asynchronous (fiber based) strictly typed full-featured PHP library for AMQP 0.9.1 protocol.
 
+## Installation
+
+```shell
+composer require thesis/amqp
+```
+
 ## Contents
 - [Installation](#installation)
 - [Configuration](#configuration)
@@ -51,7 +57,7 @@ Configuration can be created from dsn, that follows the [amqp uri spec](https://
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
+use Thesis\Amqp\Config;
 
 $config = Config::fromURI('amqp://guest:guest@localhost:5672/');
 ```
@@ -63,7 +69,7 @@ From array (for example, if you keep the configuration of your application as an
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
+use Thesis\Amqp\Config;
 
 $config = Config::fromArray([
     'scheme' => 'amqp',
@@ -81,7 +87,7 @@ From primary constructor.
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
+use Thesis\Amqp\Config;
 
 $config = new Config(
     host: 'localhost',
@@ -99,7 +105,7 @@ If the original amqp server settings remain unchanged, you can use `Config::defa
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
+use Thesis\Amqp\Config;
 
 $config = Config::default(); // amqp://guest:guest@localhost:5672/
 ```
@@ -113,7 +119,7 @@ The `vhost` value should be configured with the path parameter.
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
+use Thesis\Amqp\Config;
 
 $config = Config::fromURI('amqp://guest:guest@localhost:5672/test');
 ```
@@ -127,7 +133,7 @@ To configure priority and availability of auth mechanisms provide query paramete
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
+use Thesis\Amqp\Config;
 
 $config = Config::fromURI('amqp://guest:guest@localhost:5672/?auth_mechanism=amqplain&auth_mechanism=plain');
 ```
@@ -143,7 +149,7 @@ The heartbeat value must be in seconds.
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
+use Thesis\Amqp\Config;
 
 $config = Config::fromURI('amqp://guest:guest@localhost:5672/?heartbeat=30');
 ```
@@ -159,7 +165,7 @@ To configure tcp connection timeout use `connection_timeout` with value in secon
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
+use Thesis\Amqp\Config;
 
 $config = Config::fromURI('amqp://guest:guest@localhost:5672/?connection_timeout=10');
 ```
@@ -175,12 +181,12 @@ The `channel_max` value tells to the client and amqp server how many channels wi
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
+use Thesis\Amqp\Config;
 
 $config = Config::fromURI('amqp://guest:guest@localhost:5672/?channel_max=30000');
 ```
 
-When the channel limit is exhausted, you will get an `Typhoon\Amqp091\Exception\NoAvailableChannel` exception.
+When the channel limit is exhausted, you will get an `Thesis\Amqp\Exception\NoAvailableChannel` exception.
 
 #### frame_max
 
@@ -192,7 +198,7 @@ If you doesn't understand the setting, you shouldn't change this value.
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
+use Thesis\Amqp\Config;
 
 $config = Config::fromURI('amqp://guest:guest@localhost:5672/?frame_max=50000');
 ```
@@ -206,7 +212,7 @@ You can enable `tcp nodelay` by setting the value to `true`.
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
+use Thesis\Amqp\Config;
 
 $config = Config::fromURI('amqp://guest:guest@localhost:5672/?tcp_nodelay=true');
 ```
@@ -222,8 +228,8 @@ The client is the connection facade to the `amqp` server. It is responsible for 
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Client;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Client;
 
 $client = new Client(Config::default());
 $client->connect();
@@ -242,8 +248,8 @@ The new channel can be obtained **only** from the client.
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Client;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Client;
 
 $client = new Client(Config::default());
 $client->connect();
@@ -256,7 +262,7 @@ $client->disconnect();
 
 - If you are terminating an application, you don't have to call `$channel->close()`, because `$client->disconnect()` will close all channels anyway.
 - However, you cannot leave channels open during the life of the application without using them – otherwise you may exhaust the open channel limit from the `channel_max` setting.
-- After closing a channel yourself or getting a `Typhoon\Amqp091\Exception\ChannelWasClosed` exception, you cannot use the channel – open a new one.
+- After closing a channel yourself or getting a `Thesis\Amqp\Exception\ChannelWasClosed` exception, you cannot use the channel – open a new one.
 
 #### exchange declare
 
@@ -267,8 +273,8 @@ $client->disconnect();
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Client;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Client;
 
 $client = new Client(Config::default());
 $client->connect();
@@ -286,8 +292,8 @@ $channel->exchangeDeclare('events', durable: true);
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Client;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Client;
 
 $client = new Client(Config::default());
 $client->connect();
@@ -305,8 +311,8 @@ $channel->exchangeBind('service.a', 'service.b');
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Client;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Client;
 
 $client = new Client(Config::default());
 $client->connect();
@@ -324,8 +330,8 @@ $channel->exchangeUnbind('service.a', 'service.b');
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Client;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Client;
 
 $client = new Client(Config::default());
 $client->connect();
@@ -343,8 +349,8 @@ $channel->exchangeDelete('service.a', ifUnused: true);
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Client;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Client;
 
 $client = new Client(Config::default());
 $client->connect();
@@ -364,8 +370,8 @@ var_dump($queue->messages, $queue->consumers);
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Client;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Client;
 
 $client = new Client(Config::default());
 $client->connect();
@@ -383,8 +389,8 @@ $channel->queueBind('service.a.events', 'service.a');
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Client;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Client;
 
 $client = new Client(Config::default());
 $client->connect();
@@ -402,8 +408,8 @@ $channel->queueUnbind('service.a.events', 'service.a');
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Client;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Client;
 
 $client = new Client(Config::default());
 $client->connect();
@@ -422,8 +428,8 @@ var_dump($messages);
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Client;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Client;
 
 $client = new Client(Config::default());
 $client->connect();
@@ -444,10 +450,10 @@ There are notable changes here compared to other libraries.
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Client;
-use Typhoon\Amqp091\Message;
-use Typhoon\Amqp091\DeliveryMode;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Client;
+use Thesis\Amqp\Message;
+use Thesis\Amqp\DeliveryMode;
 
 $client = new Client(Config::default());
 $client->connect();
@@ -472,8 +478,8 @@ $channel->publish(new Message(
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Client;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Client;
 
 $client = new Client(Config::default());
 $client->connect();
@@ -496,8 +502,8 @@ var_dump($delivery?->contentEncoding);
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Client;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Client;
 
 $client = new Client(Config::default());
 $client->connect();
@@ -514,8 +520,8 @@ Or through a channel.
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Client;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Client;
 
 $client = new Client(Config::default());
 $client->connect();
@@ -536,8 +542,8 @@ if ($delivery !== null) {
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Client;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Client;
 
 $client = new Client(Config::default());
 $client->connect();
@@ -554,8 +560,8 @@ Or through a channel.
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Client;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Client;
 
 $client = new Client(Config::default());
 $client->connect();
@@ -577,8 +583,8 @@ if ($delivery !== null) {
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Client;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Client;
 
 $client = new Client(Config::default());
 $client->connect();
@@ -595,8 +601,8 @@ Or through a channel.
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Client;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Client;
 
 $client = new Client(Config::default());
 $client->connect();
@@ -617,10 +623,10 @@ if ($delivery !== null) {
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Client;
-use Typhoon\Amqp091\Delivery;
-use Typhoon\Amqp091\Channel;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Client;
+use Thesis\Amqp\Delivery;
+use Thesis\Amqp\Channel;
 
 $client = new Client(Config::default());
 $client->connect();
@@ -643,8 +649,8 @@ If you don't like the `callback api` like I do, you can handle messages through 
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Client;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Client;
 use Amp;
 
 $client = new Client(Config::default());
@@ -678,8 +684,8 @@ Also, you can throw an exception using `Iterator::cancel`.
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Client;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Client;
 use Amp;
 
 $client = new Client(Config::default());
@@ -716,9 +722,9 @@ $client->disconnect();
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Client;
-use Typhoon\Amqp091\Message;
-use Typhoon\Amqp091\Config;
+use Thesis\Amqp\Client;
+use Thesis\Amqp\Message;
+use Thesis\Amqp\Config;
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
@@ -752,10 +758,10 @@ If you prefer not to manage the transaction yourself, you can use the `Channel::
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Channel;
-use Typhoon\Amqp091\Client;
-use Typhoon\Amqp091\Message;
-use Typhoon\Amqp091\Config;
+use Thesis\Amqp\Channel;
+use Thesis\Amqp\Client;
+use Thesis\Amqp\Message;
+use Thesis\Amqp\Config;
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
@@ -793,9 +799,9 @@ you get a `Confirmation` object that can be waited on in non-blocking mode via `
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Client;
-use Typhoon\Amqp091\Message;
-use Typhoon\Amqp091\Config;
+use Thesis\Amqp\Client;
+use Thesis\Amqp\Message;
+use Thesis\Amqp\Config;
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
@@ -821,14 +827,14 @@ If you are lucky, the amqp server will return multiple confirmations, or even on
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Client;
-use Typhoon\Amqp091\Confirmation;
-use Typhoon\Amqp091\Message;
-use Typhoon\Amqp091\Config;
+use Thesis\Amqp\Client;
+use Thesis\Amqp\Confirmation;
+use Thesis\Amqp\Message;
+use Thesis\Amqp\Config;
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
-$client = new Client(Config::fromURI('amqp://typhoon:secret@localhost:5673/'));
+$client = new Client(Config::fromURI('amqp://thesis:secret@localhost:5673/'));
 $client->connect();
 
 $channel = $client->channel();
@@ -856,9 +862,9 @@ Returned messages (with `mandatory` flag set on `Channel::publish`) can also be 
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Client;
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Message;
+use Thesis\Amqp\Client;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Message;
 use Amp;
 
 require_once __DIR__ . '/../../vendor/autoload.php';
@@ -886,14 +892,14 @@ If you prefer the classic callback api, use the `map` method.
 
 declare(strict_types=1);
 
-use Typhoon\Amqp091\Client;
-use Typhoon\Amqp091\Config;
-use Typhoon\Amqp091\Delivery;
-use Typhoon\Amqp091\Message;
+use Thesis\Amqp\Client;
+use Thesis\Amqp\Config;
+use Thesis\Amqp\Delivery;
+use Thesis\Amqp\Message;
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
-$client = new Client(Config::fromURI('amqp://typhoon:secret@localhost:5673/'));
+$client = new Client(Config::fromURI('amqp://thesis:secret@localhost:5673/'));
 $client->connect();
 
 $channel = $client->channel();

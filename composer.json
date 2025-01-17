@@ -1,35 +1,109 @@
 {
-    "name": "typhoon/amqp091",
-    "description": "Async (fiber based) client for amqp 091",
+    "name": "thesis/amqp",
+    "description": "Async (fiber based) client for AMQP 0.9.1",
     "license": "MIT",
     "type": "library",
     "authors": [
-        {
-            "name": "kafkiansky",
-            "email": "vadimzanfir@gmail.com"
-        },
         {
             "name": "Valentin Udaltsov",
             "email": "udaltsov.valentin@gmail.com"
         },
         {
-            "name": "Typhoon Team",
-            "homepage": "https://github.com/orgs/typhoon-php/people"
+            "name": "kafkiansky",
+            "email": "vadimzanfir@gmail.com"
+        },
+        {
+            "name": "Thesis Team",
+            "homepage": "https://github.com/orgs/thesisphp/people"
         }
     ],
     "require": {
-        "php": "^8.1",
+        "php": "^8.3",
+        "ext-filter": "*",
         "amphp/amp": "^3.0",
         "amphp/pipeline": "^1.2",
-        "amphp/socket": "^2.3"
+        "amphp/socket": "^2.3",
+        "revolt/event-loop": "^1.0@dev",
+        "thesis/amp-bridge": "0.1.x-dev",
+        "thesis/byte-buffer": "0.1.x-dev",
+        "thesis/byte-order": "0.1.x-dev",
+        "thesis/byte-reader": "^0.3.1",
+        "thesis/byte-writer": "^0.2.1",
+        "thesis/endian": "0.1.x-dev",
+        "thesis/reader-writer": "0.1.x-dev"
     },
-    "minimum-stability": "stable",
+    "require-dev": {
+        "bamarni/composer-bin-plugin": "^1.8",
+        "ergebnis/composer-normalize": "^2.45",
+        "phpunit/phpunit": "^11.5",
+        "symfony/var-dumper": "7.3.x-dev"
+    },
+    "repositories": [
+        {
+            "type": "git",
+            "url": "https://github.com/thesisphp/byte-buffer.git"
+        },
+        {
+            "type": "git",
+            "url": "https://github.com/thesisphp/amp-bridge.git"
+        },
+        {
+            "type": "git",
+            "url": "https://github.com/thesisphp/byte-order.git"
+        },
+        {
+            "type": "git",
+            "url": "https://github.com/thesisphp/reader-writer.git"
+        }
+    ],
+    "minimum-stability": "dev",
     "autoload": {
         "psr-4": {
-            "Typhoon\\Amqp091\\": ""
+            "Thesis\\Amqp\\": "src/"
         },
         "files": [
-            "Internal/functions.php"
+            "src/Internal/functions.php"
         ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Thesis\\Amqp\\": "tests/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "bamarni/composer-bin-plugin": true,
+            "ergebnis/composer-normalize": true
+        },
+        "bump-after-update": "dev",
+        "platform": {
+            "php": "8.3"
+        },
+        "sort-packages": true
+    },
+    "extra": {
+        "bamarni-bin": {
+            "bin-links": false,
+            "forward-command": true,
+            "target-directory": "tools"
+        }
+    },
+    "scripts": {
+        "check": [
+            "@composer fixcs -- --dry-run",
+            "@phpstan",
+            "@composer validate",
+            "@composer normalize --dry-run",
+            "@check-require",
+            "@check-unused",
+            "@test"
+        ],
+        "check-require": "tools/composer-require-checker/vendor/bin/composer-require-checker",
+        "check-unused": "tools/composer-unused/vendor/bin/composer-unused",
+        "fixcs": "tools/php-cs-fixer/vendor/bin/php-cs-fixer fix --diff --verbose",
+        "infection": "tools/infection/vendor/bin/infection --show-mutations",
+        "phpstan": "tools/phpstan/vendor/bin/phpstan analyze",
+        "pre-command-run": "mkdir -p var",
+        "test": "phpunit"
     }
 }
