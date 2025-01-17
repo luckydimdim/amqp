@@ -13,8 +13,8 @@ use Thesis\Amqp\Internal\Hooks;
 use Thesis\Amqp\Internal\Protocol;
 use Thesis\ByteBuffer\BufferedReaderWriter;
 use Thesis\ByteReader\UnexpectedEof;
+use Thesis\ByteReaderWriter\ReaderWriter;
 use Thesis\ByteWriter\Writer;
-use Thesis\ReaderWriter\ReaderWriter;
 
 /**
  * @internal
