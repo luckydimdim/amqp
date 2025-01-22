@@ -1,0 +1,29 @@
+on:
+  push:
+    branches: ['main', '*.*.x']
+  pull_request: ~
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: "8.3"
+        dependencies: ["locked", "lowest", "highest"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          ini-file: development
+          tools: composer:v2
+          extensions: pcntl
+          ini-values: disable_functions=pcntl_fork
+      - uses: ramsey/composer-install@v3
+        with:
+          composer-options: --optimize-autoloader
+          dependency-versions: ${{ matrix.dependencies }}
+        env:
+          COMPOSER_AUTH: ${{ secrets.COMPOSER_AUTH || '{}' }}
+      - uses: namoshek/rabbitmq-github-action@v1
+      - run: THESIS_AMQP_DSN="amqp://guest:guest@127.0.0.1:5673/?tcp_nodelay=true" composer test -- --colors=always
