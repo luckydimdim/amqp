@@ -146,7 +146,7 @@ final class AmqpTest extends TestCase
         $channel->queueDeclare($queue, autoDelete: true);
 
         self::expectException(ChannelWasClosed::class);
-        self::expectExceptionMessage("Channel was closed by the server: PRECONDITION_FAILED - inequivalent arg 'x-queue-type' for queue '{$queue}' in vhost '/': received the value 'quorum' of type 'longstr' but current is none.");
+        self::expectExceptionMessage("Channel was closed by the server: PRECONDITION_FAILED - inequivalent arg 'x-queue-type' for queue '{$queue}' in vhost '/': received 'quorum' but current is 'classic'.");
         $channel->queueDeclare($queue, autoDelete: true, arguments: [
             'x-queue-type' => 'quorum',
         ]);
