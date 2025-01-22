@@ -6,6 +6,15 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      rabbitmq:
+        image: rabbitmq:alpine
+        ports:
+          - "5672:5672"
+        env:
+          RABBITMQ_DEFAULT_USER: guest
+          RABBITMQ_DEFAULT_PASS: guest
+        options: --health-cmd "rabbitmqctl node_health_check" --health-interval 10s --health-timeout 5s --health-retries 5
     strategy:
       matrix:
         php: ["8.3"]
@@ -25,7 +34,4 @@ jobs:
           dependency-versions: ${{ matrix.dependencies }}
         env:
           COMPOSER_AUTH: ${{ secrets.COMPOSER_AUTH || '{}' }}
-      - uses: namoshek/rabbitmq-github-action@v1
-        with:
-          ports: "5673:5672"
-      - run: THESIS_AMQP_DSN="amqp://guest:guest@127.0.0.1:5673/?tcp_nodelay=true" composer test -- --colors=always
+      - run: THESIS_AMQP_DSN="amqp://guest:guest@127.0.0.1:5672/?tcp_nodelay=true" composer test -- --colors=always
