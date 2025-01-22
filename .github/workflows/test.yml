@@ -26,4 +26,6 @@ jobs:
         env:
           COMPOSER_AUTH: ${{ secrets.COMPOSER_AUTH || '{}' }}
       - uses: namoshek/rabbitmq-github-action@v1
+        with:
+          ports: "5673:5672"
       - run: THESIS_AMQP_DSN="amqp://guest:guest@127.0.0.1:5673/?tcp_nodelay=true" composer test -- --colors=always
