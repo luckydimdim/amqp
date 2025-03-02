@@ -56,9 +56,13 @@ final class Client
             $context = $context->withTcpNoDelay();
         }
 
-        $this->connection = new AmqpConnection(
-            Socket\connect($this->config->connectionDsn(), $context),
-        );
+        $socket = Socket\connect($this->config->connectionDsn(), $context);
+
+        if ($this->config->scheme === Scheme::amqps) {
+            $socket->setupTls();
+        }
+
+        $this->connection = new AmqpConnection($socket);
 
         $start = $this->connection->rpc(Frame\ProtocolHeader::frame, Frame\ConnectionStart::class);
 
