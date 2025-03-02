@@ -584,9 +584,13 @@ final class AmqpTest extends TestCase
 
         /** @var DeferredFuture<Delivery> $deferred */
         $deferred = new DeferredFuture();
-        $channel->returns->map($deferred->complete(...));
 
         $channel->publish(new Message('x'), routingKey: 'not_exists', mandatory: true);
+
+        foreach ($channel->returns as $return) {
+            $deferred->complete($return);
+            break;
+        }
 
         $delivery = $deferred->getFuture()->await();
         self::assertSame('x', $delivery->body);

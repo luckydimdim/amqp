@@ -885,34 +885,6 @@ $channel->publish(new Message('...'), routingKey: 'not_exists', mandatory: true)
 $client->disconnect();
 ```
 
-If you prefer the classic callback api, use the `map` method.
-
-```php
-<?php
-
-declare(strict_types=1);
-
-use Thesis\Amqp\Client;
-use Thesis\Amqp\Config;
-use Thesis\Amqp\Delivery;
-use Thesis\Amqp\Message;
-
-require_once __DIR__ . '/../../vendor/autoload.php';
-
-$client = new Client(Config::fromURI('amqp://thesis:secret@localhost:5673/'));
-$client->connect();
-
-$channel = $client->channel();
-$channel->returns
-    ->map(static function (Delivery $return): void {
-        var_dump("message '{$return->body}' was return from {$return->exchange}:{$return->routingKey}");
-    });
-
-$channel->publish(new Message('...'), routingKey: 'not_exists', mandatory: true);
-
-$client->disconnect();
-```
-
 ## License
 
 The MIT License (MIT). Please see [License File](LICENSE) for more information.
