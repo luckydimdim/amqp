@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] 2025-04-12
+
+### Added
+
+- Support cluster config.
+- Added batch api for publish.
+
+### Changed
+
+- Enable `tcp_nodelay` by default.
+- Add `Thesis\Amqp\Channel::isClosed()`.
+- Use PascalCase for `ChannelMode` cases.
+- Use `Thesis\Amqp\Message` in `Thesis\Amqp\Delivery`.
+- Rename `Thesis\Amqp\Confirmation` to `Thesis\Amqp\PublishConfirmation`.
+
 ## [0.2.0] 2025-03-23
 
 ### Changed
