@@ -12,6 +12,7 @@ use Thesis\Amqp\Exception\ChannelIsNotTransactional;
 use Thesis\Amqp\Exception\ChannelModeIsImpossible;
 use Thesis\Amqp\Exception\ChannelWasClosed;
 use Thesis\Amqp\Exception\NoAvailableChannel;
+use function Amp\async;
 use function Amp\delay;
 
 #[CoversClass(Client::class)]
@@ -569,6 +570,83 @@ final class AmqpTest extends TestCase
 
         self::assertSame($publishedMessages, $deferred->getFuture()->await());
         self::assertSame(0, $channel->queuePurge($queue));
+
+        $channel->close();
+    }
+
+    public function testPublishConsumeBatch(): void
+    {
+        $channel = $this->client->channel();
+
+        $queue = $channel->queueDeclare();
+
+        for ($i = 0; $i < 8; ++$i) {
+            $channel->publish(new Message("{$i}"), routingKey: $queue->name);
+        }
+
+        /** @var list<list<string>> $messages */
+        $messages = [];
+
+        $consumerTag = $channel->consumeBatch(
+            static function (ConsumeBatch $batch) use (&$messages): void {
+                $messages[] = array_map(static fn(DeliveryMessage $delivery): string => $delivery->message->body, $batch->deliveries);
+                $batch->ack();
+            },
+            count: 5,
+            timeout: 0.1,
+            queue: $queue->name,
+        );
+
+        delay(0.3);
+
+        $channel->cancel($consumerTag);
+
+        self::assertSame(
+            [['0', '1', '2', '3', '4'], ['5', '6', '7']],
+            $messages,
+        );
+        self::assertSame(0, $channel->queueDelete($queue->name));
+
+        $channel->close();
+    }
+
+    public function testPublishConsumeBatchIterator(): void
+    {
+        $channel = $this->client->channel();
+
+        $queue = $channel->queueDeclare();
+        self::assertSame(0, $queue->messages);
+
+        for ($i = 0; $i < 8; ++$i) {
+            $channel->publish(new Message("{$i}"), routingKey: $queue->name);
+        }
+
+        $iterator = $channel->consumeBatchIterator(
+            count: 5,
+            timeout: 0.1,
+            queue: $queue->name,
+        );
+
+        $future = async(static function () use ($iterator): void {
+            delay(0.3);
+            $iterator->complete();
+        });
+
+        /** @var list<list<string>> $messages */
+        $messages = [];
+
+        foreach ($iterator as $batch) {
+            $messages[] = array_map(static fn(DeliveryMessage $delivery): string => $delivery->message->body, $batch->deliveries);
+            $batch->ack();
+        }
+
+        $future->await();
+
+        self::assertSame(
+            [['0', '1', '2', '3', '4'], ['5', '6', '7']],
+            $messages,
+        );
+        self::assertSame(0, $channel->queueDelete($queue->name));
 
         $channel->close();
     }
