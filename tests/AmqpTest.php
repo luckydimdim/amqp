@@ -264,7 +264,8 @@ final class AmqpTest extends TestCase
                     new PublishMessage(new Message('2'), exchange: $exchange, routingKey: $routingKey),
                     new PublishMessage(new Message('3'), exchange: $exchange, routingKey: $routingKey),
                 ])
-                ->unconfirmed(),
+                ->await()
+                ->unconfirmed,
         );
 
         for ($i = 1; $i <= 3; ++$i) {
@@ -704,17 +705,72 @@ final class AmqpTest extends TestCase
 
         /** @var DeferredFuture<DeliveryMessage> $deferred */
         $deferred = new DeferredFuture();
+        $channel->onReturn($deferred->complete(...));
 
         $channel->publish(new Message('x'), routingKey: 'not_exists', mandatory: true);
-
-        foreach ($channel->returns as $return) {
-            $deferred->complete($return);
-            break;
-        }
 
         $delivery = $deferred->getFuture()->await();
         self::assertSame('x', $delivery->message->body);
         self::assertSame('not_exists', $delivery->routingKey);
+
+        $channel->close();
+    }
+
+    public function testPublishExplicitReturnWithoutMandatory(): void
+    {
+        $channel = $this->client->channel();
+        $channel->confirmSelect();
+
+        $confirmation = $channel->publish(new Message('x'), routingKey: 'not_exists');
+
+        self::assertSame(PublishResult::Acked, $confirmation?->await());
+
+        $channel->close();
+    }
+
+    public function testPublishExplicitReturn(): void
+    {
+        $channel = $this->client->channel();
+        $channel->confirmSelect();
+
+        $returns = 0;
+
+        // Callbacks for deliveries with X-Thesis-Mandatory-Id will not be call.
+        $channel->onReturn(static function () use (&$returns): void {
+            ++$returns;
+        });
+
+        $confirmation = $channel->publish(new Message('x'), routingKey: 'not_exists', mandatory: true);
+
+        self::assertSame(PublishResult::Unrouted, $confirmation?->await());
+        self::assertSame(0, $returns);
+
+        $channel->close();
+    }
+
+    public function testPublishBatchExplicitReturn(): void
+    {
+        $channel = $this->client->channel();
+        $channel->confirmSelect();
+
+        $returns = 0;
+
+        // Callbacks for deliveries with X-Thesis-Mandatory-Id will not be call.
+        $channel->onReturn(static function () use (&$returns): void {
+            ++$returns;
+        });
+
+        $confirmation = $channel->publishBatch([
+            new PublishMessage(new Message('x'), routingKey: 'not_exists', mandatory: true),
+            new PublishMessage(new Message('y'), routingKey: 'not_exists', mandatory: true),
+            new PublishMessage(new Message('z'), routingKey: 'not_exists', mandatory: true),
+        ]);
+
+        $result = $confirmation->await();
+
+        self::assertCount(3, $result->unrouted);
+        self::assertCount(0, $result->unconfirmed);
+        self::assertSame(0, $returns);
 
         $channel->close();
     }

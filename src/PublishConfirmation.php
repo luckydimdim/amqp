@@ -6,6 +6,9 @@ namespace Thesis\Amqp;
 
 use Amp\Cancellation;
 use Amp\Future;
+use Thesis\Amqp\Exception\MessageCannotBeRouted;
+use Thesis\Amqp\Internal\Returns\ReturnFuture;
+use function Amp\async;
 
 /**
  * @api
@@ -35,7 +38,7 @@ final class PublishConfirmation
     {
         $futures = [];
         foreach ($confirmations as $confirmation) {
-            $futures[$confirmation->deliveryTag] = $confirmation->future;
+            $futures[$confirmation->deliveryTag] = async($confirmation->await(...));
         }
 
         return Future::iterate($futures, $cancellation);
@@ -52,25 +55,32 @@ final class PublishConfirmation
         public readonly int $deliveryTag,
         private readonly Future $future,
         private readonly \Closure $cancel,
-    ) {
-        $this->future->map(function (PublishResult $result): void {
-            $this->result = $result;
-        });
-    }
+        private readonly ?ReturnFuture $returnFuture = null,
+    ) {}
 
     public function await(?Cancellation $cancellation = null): PublishResult
     {
-        $cancellation?->subscribe($this->cancel(...));
+        if ($this->result !== PublishResult::Waiting) {
+            return $this->result;
+        }
 
-        return $this->future->await($cancellation);
-    }
+        $futures = [$this->future];
 
-    /**
-     * @return Future<PublishResult>
-     */
-    public function future(): Future
-    {
-        return $this->future;
+        if ($this->returnFuture !== null) {
+            $futures[] = $this->returnFuture->future;
+        }
+
+        $cancellationId = $cancellation?->subscribe($this->cancel(...));
+
+        try {
+            return $this->result = Future\awaitFirst($futures, $cancellation);
+        } catch (MessageCannotBeRouted) { // @phpstan-ignore-line
+            return $this->result = PublishResult::Unrouted;
+        } finally {
+            /** @phpstan-ignore argument.type */
+            $cancellation?->unsubscribe($cancellationId);
+            $this->returnFuture?->complete();
+        }
     }
 
     public function result(): PublishResult

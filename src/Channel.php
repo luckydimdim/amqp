@@ -23,13 +23,17 @@ use Thesis\Amqp\Internal\MessageProperties;
 use Thesis\Amqp\Internal\Properties;
 use Thesis\Amqp\Internal\Protocol;
 use Thesis\Amqp\Internal\Protocol\Frame;
+use Thesis\Amqp\Internal\Returns;
 
 /**
  * @api
+ * @phpstan-import-type ReturnCallback from Returns\ReturnListener
  */
 final class Channel
 {
-    public readonly Returns $returns;
+    private readonly Returns\ReturnListener $returns;
+
+    private readonly Returns\FutureBoundedReturnListener $boundedReturns;
 
     private readonly DeliverySupervisor $supervisor;
 
@@ -60,7 +64,8 @@ final class Channel
         $this->consumerTags = new ConsumerTagGenerator();
         $this->consumer = Consumer::create($this->supervisor, $this);
         $this->receiver = Receiver::create($this->supervisor);
-        $this->returns = Returns::create($this->supervisor);
+        $this->returns = new Returns\ReturnListener($this->supervisor);
+        $this->boundedReturns = new Returns\FutureBoundedReturnListener($this->supervisor);
         $this->confirms = new ConfirmationListener($this->hooks, $this->channelId);
         $this->cancellations = new CancellationStorage();
 
@@ -77,11 +82,22 @@ final class Channel
         bool $mandatory = false,
         bool $immediate = false,
     ): ?PublishConfirmation {
+        /** @var ?PublishConfirmation $confirmation */
+        $confirmation = null;
+
+        if ($this->mode === ChannelMode::Confirm) {
+            if ($mandatory) {
+                [$message, $returnFuture] = $this->boundedReturns->trace($message);
+            }
+
+            $confirmation = $this->confirms->newConfirmation($returnFuture ?? null);
+        }
+
         $this->connection->writeFrame(
             $this->doPublish($message, $exchange, $routingKey, $mandatory, $immediate),
         );
 
-        return $this->mode === ChannelMode::Confirm ? $this->confirms->newConfirmation() : null;
+        return $confirmation;
     }
 
     /**
@@ -98,6 +114,25 @@ final class Channel
 
         $this->connection->writeFrame((function () use ($publishMessages, &$confirmations, &$messages): \Generator {
             foreach ($publishMessages as $publishMessage) {
+                if ($this->mode === ChannelMode::Confirm) {
+                    if ($publishMessage->mandatory) {
+                        [$message, $returnFuture] = $this->boundedReturns->trace($publishMessage->message);
+
+                        $publishMessage = new PublishMessage(
+                            message: $message,
+                            exchange: $publishMessage->exchange,
+                            routingKey: $publishMessage->routingKey,
+                            mandatory: $publishMessage->mandatory,
+                            immediate: $publishMessage->immediate,
+                        );
+                    }
+
+                    $confirmation = $this->confirms->newConfirmation($returnFuture ?? null);
+
+                    $confirmations[] = $confirmation;
+                    $messages[$confirmation->deliveryTag] = $publishMessage;
+                }
+
                 yield from $this->doPublish(
                     $publishMessage->message,
                     $publishMessage->exchange,
@@ -105,13 +140,6 @@ final class Channel
                     $publishMessage->mandatory,
                     $publishMessage->immediate,
                 );
-
-                if ($this->mode === ChannelMode::Confirm) {
-                    $confirmation = $this->confirms->newConfirmation();
-
-                    $confirmations[] = $confirmation;
-                    $messages[$confirmation->deliveryTag] = $publishMessage;
-                }
             }
         })());
 
@@ -727,6 +755,15 @@ final class Channel
 
         $this->mode = ChannelMode::Confirm;
         $this->confirms->listen();
+        $this->boundedReturns->listen();
+    }
+
+    /**
+     * @param ReturnCallback $callback
+     */
+    public function onReturn(callable $callback): void
+    {
+        $this->returns->addReturnCallback($callback);
     }
 
     public function isClosed(): bool
