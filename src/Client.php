@@ -37,7 +37,9 @@ final class Client
 
     private readonly Hooks $hooks;
 
-    public function __construct(private readonly Config $config)
+    public function __construct(
+        public readonly Config $config
+    )
     {
         $this->properties = Properties::createDefault();
         $this->hooks = Hooks::create();

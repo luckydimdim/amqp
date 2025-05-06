@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reorder `Channel` properties.
 - Sync codebase with the latest Thesis template and update dev dependencies.
 - Apply Rector fixes.
+- Make `Client::$config` property public.
 
 ## Added
 
