@@ -10,7 +10,7 @@ use PHPUnit\Framework\TestCase;
 #[CoversClass(PublishBatchConfirmationResult::class)]
 final class PublishBatchConfirmationResultTest extends TestCase
 {
-    public function testOk(): void
+    public function testEnsureAllPublished(): void
     {
         $result = new PublishBatchConfirmationResult(
             unconfirmed: [
@@ -23,6 +23,6 @@ final class PublishBatchConfirmationResultTest extends TestCase
 
         $this->expectExceptionObject(new \RuntimeException('Failed to publish 2 messages.'));
 
-        $result->ok();
+        $result->ensureAllPublished();
     }
 }

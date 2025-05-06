@@ -27,7 +27,7 @@ $channel
         range(1, 8),
     ))
     ->await()
-    ->ok();
+    ->ensureAllPublished();
 
 $consumerTag = $channel->consumeBatch(
     static function (ConsumeBatch $batch): void {

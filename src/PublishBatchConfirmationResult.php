@@ -18,7 +18,7 @@ final readonly class PublishBatchConfirmationResult
         public array $unrouted,
     ) {}
 
-    public function ok(): void
+    public function ensureAllPublished(): void
     {
         $failedCount = \count($this->unconfirmed) + \count($this->unrouted);
 

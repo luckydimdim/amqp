@@ -26,7 +26,7 @@ $channel
         range(1, 8),
     ))
     ->await()
-    ->ok();
+    ->ensureAllPublished();
 
 $iterator = $channel->consumeBatchIterator(count: 5, timeout: 1, queue: $queue->name);
 
