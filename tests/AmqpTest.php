@@ -1062,4 +1062,16 @@ final class AmqpTest extends TestCase
 
         $channel->close();
     }
+
+    public function testChannelClose(): void
+    {
+        $channel = $this->client->channel();
+        self::assertFalse($channel->isClosed());
+
+        $future1 = async($channel->close(...));
+        $future2 = async($channel->isClosed(...));
+
+        [, $isClosed] = Future\await([$future1, $future2]);
+        self::assertTrue($isClosed);
+    }
 }
