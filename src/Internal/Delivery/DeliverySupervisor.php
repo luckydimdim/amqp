@@ -7,6 +7,7 @@ namespace Thesis\Amqp\Internal\Delivery;
 use Thesis\Amqp\Channel;
 use Thesis\Amqp\DeliveryMessage;
 use Thesis\Amqp\Internal\Hooks;
+use Thesis\Amqp\Internal\MessageProperties;
 use Thesis\Amqp\Internal\Protocol\Frame;
 use Thesis\Amqp\Message;
 
@@ -180,7 +181,7 @@ final class DeliverySupervisor
         \assert($this->delivery !== null || $this->return !== null || $this->get !== null, 'delivery, return or get must not be empty.');
         \assert($this->header !== null, 'header must not be empty.');
 
-        // You cannot call ack/nack/reject on a returned message.
+        // We cannot call ack/nack/reject on a returned message.
         $noAction = static function (): void {};
 
         $channel = $this->channel();
@@ -189,6 +190,7 @@ final class DeliverySupervisor
             ack: $this->return !== null ? $noAction : $channel->ack(...),
             nack: $this->return !== null ? $noAction : $channel->nack(...),
             reject: $this->return !== null ? $noAction : $channel->reject(...),
+            reply: $this->replier($this->header->properties, $channel) ?: $noAction,
             message: new Message(
                 body: $this->message,
                 headers: $this->header->properties->headers,
@@ -240,6 +242,44 @@ final class DeliverySupervisor
     private function subscribe(string $frameType, \Closure $callback): void
     {
         $this->hooks->subscribe($this->channelId, $frameType, $callback);
+    }
+
+    /**
+     * @return ?\Closure(Message): void
+     */
+    private function replier(MessageProperties $properties, Channel $channel): ?\Closure
+    {
+        $replyTo = $properties->replyTo ?? null;
+        if ($replyTo === null) {
+            return null;
+        }
+
+        $correlationId = $properties->correlationId ?? null;
+        if ($correlationId === null) {
+            return null;
+        }
+
+        return static function (Message $message) use ($channel, $replyTo, $correlationId): void {
+            $channel->publish(
+                message: new Message(
+                    body: $message->body,
+                    headers: $message->headers,
+                    contentType: $message->contentType,
+                    contentEncoding: $message->contentEncoding,
+                    deliveryMode: $message->deliveryMode,
+                    priority: $message->priority,
+                    correlationId: $correlationId,
+                    replyTo: $replyTo,
+                    expiration: $message->expiration,
+                    messageId: $message->messageId,
+                    timestamp: $message->timestamp,
+                    type: $message->type,
+                    userId: $message->userId,
+                    appId: $message->appId,
+                ),
+                routingKey: $replyTo,
+            );
+        };
     }
 
     private function channel(): Channel

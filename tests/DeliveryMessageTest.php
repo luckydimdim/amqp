@@ -14,11 +14,12 @@ use function Amp\Future\awaitAll;
 final class DeliveryMessageTest extends TestCase
 {
     /**
-     * @param 'ack'|'nack'|'reject' $operationType
+     * @param 'ack'|'nack'|'reject'|'reply' $operationType
      */
     #[TestWith(['ack'])]
     #[TestWith(['nack'])]
     #[TestWith(['reject'])]
+    #[TestWith(['reply'])]
     public function testRepetitiveOperation(string $operationType): void
     {
         $count = 0;
@@ -30,6 +31,7 @@ final class DeliveryMessageTest extends TestCase
             ack: $operation,
             nack: $operation,
             reject: $operation,
+            reply: $operation,
             message: new Message('x'),
         );
 
@@ -37,6 +39,7 @@ final class DeliveryMessageTest extends TestCase
             'ack' => $delivery->ack(...),
             'nack' => $delivery->nack(...),
             'reject' => $delivery->reject(...),
+            'reply' => static fn() => $delivery->reply(new Message()),
         };
 
         $futures = [];
