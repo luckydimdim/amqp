@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] 2025-06-07
+
+## Changed
+
+- Refactor integration with `DeliverySupervisor`.
+- Replace `Amp\Future` with `Thesis\Sync` on `Delivery` methods.
+- Use `Thesis\TimeSpan`.
+- Fix channel garbage collection.
+- Hooks refactoring.
+- Allow to call `Channel::get` concurrently.
+- Allow to call `Channel::close` concurrently.
+- Fix iterator complete.
+- Improve documentation.
+- Clear all Channel and Client state on `close/disconnect`.
+
+## Added
+
+- RPC implemented.
+
 ## [0.4.0] 2025-05-06
 
 ## Changed
