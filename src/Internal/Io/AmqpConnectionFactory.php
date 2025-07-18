@@ -116,6 +116,10 @@ final readonly class AmqpConnectionFactory
             $context = $context->withTcpNoDelay();
         }
 
+        if ($this->config->scheme === Scheme::amqps) {
+            $context = $this->configureTlsContext($context);
+        }
+
         $socket = Socket\connect($url, $context);
 
         if ($this->config->scheme === Scheme::amqps) {
@@ -123,5 +127,31 @@ final readonly class AmqpConnectionFactory
         }
 
         return $socket;
+    }
+
+    private function configureTlsContext(Socket\ConnectContext $context): Socket\ConnectContext
+    {
+        $tlsContext = new Socket\ClientTlsContext($this->config->serverName ?? '');
+
+        if ($this->config->cacertFile !== null && file_exists($this->config->cacertFile)) {
+            $tlsContext = $tlsContext->withCaFile($this->config->cacertFile);
+        }
+
+        if ($this->config->certFile !== null && $this->config->keyFile !== null) {
+            if (file_exists($this->config->certFile) && file_exists($this->config->keyFile)) {
+                $certificate = new Socket\Certificate($this->config->certFile, $this->config->keyFile);
+                $tlsContext = $tlsContext->withCertificate($certificate);
+            }
+        }
+
+        if (!$this->config->verifyPeer) {
+            $tlsContext = $tlsContext->withoutPeerVerification();
+        } elseif (!$this->config->verifyPeerName) {
+            $parsedUrl = parse_url($this->config->urls[0]);
+            $host = $parsedUrl['host'] ?? 'localhost';
+            $tlsContext = $tlsContext->withPeerName($host);
+        }
+
+        return $context->withTlsContext($tlsContext);
     }
 }
