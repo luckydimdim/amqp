@@ -164,7 +164,9 @@ final readonly class Config
 
         $vhost = self::DEFAULT_VHOST;
         if (isset($components['path']) && $components['path'] !== '') {
-            $vhost = $components['path'];
+            if ('' === $vhost = ltrim($components['path'], '/')) {
+                $vhost = self::DEFAULT_VHOST;
+            }
         }
 
         $user = self::DEFAULT_USERNAME;
