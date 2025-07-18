@@ -52,6 +52,8 @@ final readonly class Config
         public int $channelMax = self::MAX_CHANNEL,
         public int $frameMax = self::MAX_FRAME,
         public bool $tcpNoDelay = true,
+        public bool $verifyPeer = true,
+        public bool $verifyPeerName = true,
     ) {
         $authMechanisms = $this->authMechanisms;
         if (\count($authMechanisms) === 0) {
@@ -139,6 +141,16 @@ final readonly class Config
             $tcpNoDelay = filter_var($query['tcp_nodelay'], FILTER_VALIDATE_BOOL);
         }
 
+        $verifyPeer = true;
+        if (isset($query['verify_peer'])) {
+            $verifyPeer = filter_var($query['verify_peer'], FILTER_VALIDATE_BOOL);
+        }
+
+        $verifyPeerName = true;
+        if (isset($query['verify_peer_name'])) {
+            $verifyPeerName = filter_var($query['verify_peer_name'], FILTER_VALIDATE_BOOL);
+        }
+
         $port = self::DEFAULT_PORT;
         if (isset($components['port']) && $components['port'] > 0) {
             $port = $components['port'];
@@ -181,6 +193,8 @@ final readonly class Config
             channelMax: $channelMax,
             frameMax: $frameMax,
             tcpNoDelay: $tcpNoDelay,
+            verifyPeer: $verifyPeer,
+            verifyPeerName: $verifyPeerName,
         );
     }
 
@@ -201,6 +215,8 @@ final readonly class Config
      *     channel_max?: int<0, 65535>,
      *     frame_max?: int<0, 65535>,
      *     tcp_nodelay?: bool,
+     *     verify_peer?: bool,
+     *     verify_peer_name?: bool,
      * } $options
      */
     public static function fromArray(array $options): self
@@ -221,6 +237,8 @@ final readonly class Config
             channelMax: $options['channel_max'] ?? self::MAX_CHANNEL,
             frameMax: $options['frame_max'] ?? self::MAX_FRAME,
             tcpNoDelay: $options['tcp_nodelay'] ?? true,
+            verifyPeer: $options['verify_peer'] ?? true,
+            verifyPeerName: $options['verify_peer_name'] ?? true,
         );
     }
 
