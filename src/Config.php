@@ -76,7 +76,7 @@ final readonly class Config
      * @param non-empty-string $uri
      * @throws UriIsInvalid
      */
-    public static function fromURI(string $uri): self
+    public static function fromURI(#[\SensitiveParameter] string $uri): self
     {
         $components = parse_url($uri);
 
@@ -221,7 +221,7 @@ final readonly class Config
      *     verify_peer_name?: bool,
      * } $options
      */
-    public static function fromArray(array $options): self
+    public static function fromArray(#[\SensitiveParameter] array $options): self
     {
         return new self(
             scheme: isset($options['scheme']) ? Scheme::parse($options['scheme']) : Scheme::amqp,
