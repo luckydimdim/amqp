@@ -9,4 +9,5 @@ jobs:
     uses: thesis-php/.github/.github/workflows/check.yml@main
     with:
       test: false
+      rector: true
     secrets: inherit
