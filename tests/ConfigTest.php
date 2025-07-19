@@ -53,7 +53,7 @@ final class ConfigTest extends TestCase
         self::assertSame('guest', $config->user);
         self::assertSame('guest', $config->password);
         self::assertSame(['localhost:5673', 'localhost:5674'], $config->urls);
-        self::assertSame('/test', $config->vhost);
+        self::assertSame('test', $config->vhost);
         self::assertSame(8, $config->channelMax);
     }
 
@@ -82,7 +82,7 @@ final class ConfigTest extends TestCase
         self::assertSame(['foo.bar:5672'], $config->urls);
         self::assertSame('guest', $config->user);
         self::assertSame('guest', $config->password);
-        self::assertSame('/test', $config->vhost);
+        self::assertSame('test', $config->vhost);
         self::assertNull($config->certFile);
         self::assertNull($config->keyFile);
         self::assertNull($config->cacertFile);
